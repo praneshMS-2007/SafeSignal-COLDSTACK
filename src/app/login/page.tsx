@@ -42,7 +42,7 @@ export default function LoginPage() {
         router.push("/");
       }
     } catch {
-      setError("Unable to reach server. Please check network connection.");
+      setError("Unable to reach server. Please check your network connection.");
     } finally {
       setLoading(false);
     }
@@ -61,9 +61,10 @@ export default function LoginPage() {
         {/* Brand Logo */}
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-[#03224D] flex items-center justify-center text-white shadow-md">
-            <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
-              oil_barrel
-            </span>
+            {/* Inline SVG Oil Barrel icon */}
+            <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8 0-2.45 1.11-4.65 2.87-6.12.33-.28.78-.34 1.16-.16.39.18.63.57.63.99v1.5c0 .55.45 1 1 1s1-.45 1-1V6.5c0-.42.24-.81.63-.99.38-.18.83-.12 1.16.16 1.76 1.47 2.87 3.67 2.87 6.12 0 4.41-3.59 8-8 8z" />
+            </svg>
           </div>
           <div>
             <div className="text-xl font-bold tracking-tight text-[#03224D] flex items-center gap-1.5">
@@ -92,9 +93,9 @@ export default function LoginPage() {
           {/* Error Alert */}
           {error && (
             <div className="mb-5 bg-[#FEF2F2] border-2 border-[#EF4444] text-[#991B1B] p-3.5 rounded-xl text-sm font-medium flex items-start gap-3 shadow-xs animate-in fade-in slide-in-from-top-1">
-              <span className="material-symbols-outlined text-[#DC2626] text-xl shrink-0 mt-0.5">
-                error
-              </span>
+              <svg className="w-5 h-5 text-[#DC2626] shrink-0 mt-0.5 fill-current" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
               <div className="flex-1">{error}</div>
             </div>
           )}
@@ -106,15 +107,18 @@ export default function LoginPage() {
                 Email or Username
               </label>
               <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[#94A3B8] text-xl pointer-events-none">
-                  mail
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#94A3B8]">
+                  <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
+                    <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                    <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                  </svg>
                 </span>
                 <input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
-                  placeholder="admin@oilindia.in or officer1"
+                  placeholder="admin, officer1, or worker1"
                   className="w-full h-12 pl-11 pr-4 border-2 border-[#E2E8F0] rounded-xl bg-[#F8FAFC] text-[#0F172A] text-sm font-medium focus:border-[#2563EB] focus:bg-white focus:outline-none transition-all placeholder:text-[#94A3B8]"
                 />
               </div>
@@ -126,8 +130,10 @@ export default function LoginPage() {
                 Secure Password
               </label>
               <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[#94A3B8] text-xl pointer-events-none">
-                  lock
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#94A3B8]">
+                  <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                  </svg>
                 </span>
                 <input
                   type={showPassword ? "text" : "password"}
@@ -143,9 +149,17 @@ export default function LoginPage() {
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#475569] transition-colors focus:outline-none"
                   tabIndex={-1}
                 >
-                  <span className="material-symbols-outlined text-xl">
-                    {showPassword ? "visibility_off" : "visibility"}
-                  </span>
+                  {showPassword ? (
+                    <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
+                      <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.064 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
+                      <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                      <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                    </svg>
+                  )}
                 </button>
               </div>
             </div>
@@ -173,11 +187,16 @@ export default function LoginPage() {
               className="w-full h-12 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-xl text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-blue-600/20 mt-2"
             >
               {loading ? (
-                <span className="material-symbols-outlined animate-spin text-xl">progress_activity</span>
+                <svg className="w-5 h-5 animate-spin fill-current" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
               ) : (
                 <>
                   <span>Sign In</span>
-                  <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
                 </>
               )}
             </button>
@@ -185,51 +204,62 @@ export default function LoginPage() {
             {/* Quick-Fill Presets for Demo */}
             <div className="mt-4 pt-4 border-t border-[#E2E8F0]">
               <div className="flex items-center justify-between mb-2.5">
-                <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider flex items-center gap-1">
-                  <span className="material-symbols-outlined text-sm">badge</span>
+                <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5 fill-current text-[#2563EB]" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 2a1 1 0 00-1 1v1a1 1 0 002 0V3a1 1 0 00-1-1zM4 4h3a3 3 0 006 0h3a2 2 0 012 2v9a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm2.5 7a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm2.45 4a2.5 2.5 0 00-4.9 0h4.9zM12 9a1 1 0 100 2h3a1 1 0 100-2h-3zm0 4a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
+                  </svg>
                   Quick Demo Accounts
                 </span>
                 <span className="text-[11px] text-[#94A3B8]">Click to populate</span>
               </div>
               <div className="grid grid-cols-3 gap-2">
+                {/* Admin */}
                 <button
                   type="button"
                   onClick={() => handleQuickFill("admin", "12345678")}
                   className="bg-[#F8FAFC] border-2 border-[#E2E8F0] hover:border-[#2563EB] hover:bg-[#EFF6FF] p-2 rounded-xl text-left transition-all group"
                 >
                   <div className="text-xs font-bold text-[#0F172A] group-hover:text-[#2563EB] flex items-center gap-1">
-                    <span className="material-symbols-outlined text-sm text-[#2563EB]">admin_panel_settings</span>
+                    <svg className="w-3.5 h-3.5 text-[#2563EB] fill-current shrink-0" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
                     HSE Admin
                   </div>
                   <div className="text-[10px] text-[#64748B] font-mono mt-0.5">admin</div>
                 </button>
 
+                {/* Officer */}
                 <button
                   type="button"
                   onClick={() => handleQuickFill("officer1", "12345678")}
                   className="bg-[#F8FAFC] border-2 border-[#E2E8F0] hover:border-[#2563EB] hover:bg-[#EFF6FF] p-2 rounded-xl text-left transition-all group"
                 >
                   <div className="text-xs font-bold text-[#0F172A] group-hover:text-[#2563EB] flex items-center gap-1">
-                    <span className="material-symbols-outlined text-sm text-[#2563EB]">shield_person</span>
+                    <svg className="w-3.5 h-3.5 text-[#2563EB] fill-current shrink-0" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                    </svg>
                     Officer
                   </div>
                   <div className="text-[10px] text-[#64748B] font-mono mt-0.5">officer1</div>
                 </button>
 
+                {/* Employee */}
                 <button
                   type="button"
                   onClick={() => handleQuickFill("worker1", "12345678")}
                   className="bg-[#F8FAFC] border-2 border-[#E2E8F0] hover:border-[#2563EB] hover:bg-[#EFF6FF] p-2 rounded-xl text-left transition-all group"
                 >
                   <div className="text-xs font-bold text-[#0F172A] group-hover:text-[#2563EB] flex items-center gap-1">
-                    <span className="material-symbols-outlined text-sm text-[#03224D]">hard_hat</span>
+                    <svg className="w-3.5 h-3.5 text-[#03224D] fill-current shrink-0" viewBox="0 0 24 24">
+                      <path d="M12 3a9 9 0 00-9 9v1a2 2 0 002 2h14a2 2 0 002-2v-1a9 9 0 00-9-9zm-1 3h2v4h-2V6zm-5 8c.36-2.83 2.5-5.11 5.3-5.69.17-.03.35-.05.53-.06.18.01.36.03.53.06 2.8 1.58 4.94 3.86 5.3 5.69H6z" />
+                    </svg>
                     Employee
                   </div>
                   <div className="text-[10px] text-[#64748B] font-mono mt-0.5">worker1</div>
                 </button>
               </div>
               <div className="text-center text-[11px] text-[#64748B] mt-2 font-mono">
-                Default demo password: <span className="font-bold text-[#0F172A]">12345678</span>
+                Password: <span className="font-bold text-[#0F172A]">12345678</span>
               </div>
             </div>
 
@@ -276,6 +306,7 @@ export default function LoginPage() {
                 src="/images/oil_safety_banner.jpg"
                 alt="Oil India Limited Industrial Safety Ecosystem"
                 fill
+                sizes="(max-width: 1024px) 100vw, 50vw"
                 priority
                 className="object-cover transition-transform duration-700 group-hover:scale-105"
               />
@@ -286,7 +317,7 @@ export default function LoginPage() {
               <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between bg-black/60 backdrop-blur-md px-3.5 py-2 rounded-xl border border-white/15 text-xs">
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-[#38BDF8] text-sm">sensors</span>
-                  <span className="font-semibold text-white">Live Telemetry & Rig Barrier Watch</span>
+                  <span className="font-semibold text-white">Live Telemetry &amp; Rig Barrier Watch</span>
                 </div>
                 <span className="text-[#10B981] font-bold">100% Guarded</span>
               </div>
