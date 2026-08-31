@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/components/AuthProvider";
+import Logo from "@/components/Logo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -62,23 +63,7 @@ export default function LoginPage() {
       <div className="w-full lg:w-1/2 bg-white flex flex-col justify-between p-6 sm:p-10 lg:p-14 xl:p-16 min-h-screen">
         {/* Brand Logo */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-[#03224D] flex items-center justify-center text-white shadow-md">
-            {/* Inline SVG Oil Barrel icon */}
-            <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8 0-2.45 1.11-4.65 2.87-6.12.33-.28.78-.34 1.16-.16.39.18.63.57.63.99v1.5c0 .55.45 1 1 1s1-.45 1-1V6.5c0-.42.24-.81.63-.99.38-.18.83-.12 1.16.16 1.76 1.47 2.87 3.67 2.87 6.12 0 4.41-3.59 8-8 8z" />
-            </svg>
-          </div>
-          <div>
-            <div className="text-xl font-bold tracking-tight text-[#03224D] flex items-center gap-1.5">
-              SafeSignal
-              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 bg-[#EEF2F6] text-[#2E4673] rounded border border-[#C4C6D0]">
-                OIL INDIA
-              </span>
-            </div>
-            <div className="text-[11px] font-semibold tracking-wider text-[#747780] uppercase">
-              Industrial Safety System
-            </div>
-          </div>
+          <Logo size="md" variant="plain" />
         </div>
 
         {/* Center Form Section */}

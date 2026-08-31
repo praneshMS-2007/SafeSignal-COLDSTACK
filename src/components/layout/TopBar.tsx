@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 import { usePathname } from "next/navigation";
 
+import Logo from "@/components/Logo";
+
 export default function TopBar() {
   const [isOnline, setIsOnline] = useState(true);
   const { user } = useAuth();
@@ -37,12 +39,7 @@ export default function TopBar() {
       {/* ─── MOBILE BRAND HEADER ───────────────────────────────── */}
       <div className="flex items-center gap-2 lg:hidden">
         <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#03224D] flex items-center justify-center text-white shadow-xs">
-            <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8 0-2.45 1.11-4.65 2.87-6.12.33-.28.78-.34 1.16-.16.39.18.63.57.63.99v1.5c0 .55.45 1 1 1s1-.45 1-1V6.5c0-.42.24-.81.63-.99.38-.18.83-.12 1.16.16 1.76 1.47 2.87 3.67 2.87 6.12 0 4.41-3.59 8-8 8z" />
-            </svg>
-          </div>
-          <span className="text-base font-bold text-[#0F172A]">SafeSignal</span>
+          <Logo size="sm" variant="plain" showSubtitle={false} />
         </Link>
       </div>
 

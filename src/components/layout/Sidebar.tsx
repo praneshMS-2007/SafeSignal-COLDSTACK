@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { useEffect, useState } from "react";
+import Logo from "@/components/Logo";
 
 interface NavItem {
   href: string;
@@ -47,25 +48,8 @@ export default function Sidebar() {
       {/* ─── TOP SECTION: BRAND BADGE ─────────────────────────── */}
       <div className="flex flex-col gap-6">
         {/* Brand Card matching Template */}
-        <Link href="/" className="group block">
-          <div className="bg-white rounded-2xl p-3.5 flex items-center gap-3 shadow-lg shadow-black/20 border border-slate-200/80 transition-transform group-hover:scale-[1.02]">
-            <div className="w-10 h-10 rounded-xl bg-[#03224D] flex items-center justify-center text-white shrink-0 shadow-md">
-              <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8 0-2.45 1.11-4.65 2.87-6.12.33-.28.78-.34 1.16-.16.39.18.63.57.63.99v1.5c0 .55.45 1 1 1s1-.45 1-1V6.5c0-.42.24-.81.63-.99.38-.18.83-.12 1.16.16 1.76 1.47 2.87 3.67 2.87 6.12 0 4.41-3.59 8-8 8z" />
-              </svg>
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-base font-extrabold tracking-tight text-[#0F172A] flex items-center justify-between">
-                <span>SafeSignal</span>
-                <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 bg-[#EEF2F6] text-[#2563EB] rounded border border-[#CBD5E1]">
-                  OIL INDIA
-                </span>
-              </div>
-              <div className="text-[10px] font-semibold tracking-wider text-slate-500 uppercase truncate">
-                Industrial Safety ERP
-              </div>
-            </div>
-          </div>
+        <Link href="/" className="group block transition-transform group-hover:scale-[1.02]">
+          <Logo variant="card" />
         </Link>
 
         {/* Navigation Items */}
