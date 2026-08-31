@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import AppLayout from "@/components/layout/AppLayout";
 import Link from "next/link";
+import { useAuth } from "@/components/AuthProvider";
 
 interface TicketDetail {
   id: string;
@@ -24,6 +25,7 @@ const STEPS = ["OPEN", "ASSIGNED", "FIXED", "UNDER_WATCH", "VERIFIED_CLOSED"];
 const STEP_LABELS = ["Open", "Assigned", "Fixed", "Under Watch", "Verified Closed"];
 
 export default function TicketDetailPage() {
+  const { user } = useAuth();
   const params = useParams();
   const router = useRouter();
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
@@ -35,12 +37,17 @@ export default function TicketDetailPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    if (user && user.role === "employee") {
+      router.replace("/");
+      return;
+    }
+
     fetch(`/api/tickets/${params.id}`)
       .then((r) => r.json())
       .then((data) => setTicket(data))
       .catch((err) => console.error("Error loading ticket detail:", err))
       .finally(() => setLoading(false));
-  }, [params.id]);
+  }, [user, router, params.id]);
 
   const handleExtension = async () => {
     await fetch(`/api/tickets/${params.id}`, {

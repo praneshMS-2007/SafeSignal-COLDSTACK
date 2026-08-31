@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import { useAuth } from "@/components/AuthProvider";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface UserItem {
   id: string;
@@ -90,9 +91,15 @@ export default function UsersManagementPage() {
     }
   };
 
+  const router = useRouter();
+
   useEffect(() => {
+    if (currentUser && currentUser.role === "employee") {
+      router.replace("/");
+      return;
+    }
     fetchUsers();
-  }, []);
+  }, [currentUser, router]);
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();

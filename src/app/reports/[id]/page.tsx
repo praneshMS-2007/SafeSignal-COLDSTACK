@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import AppLayout from "@/components/layout/AppLayout";
 import Link from "next/link";
+import { useAuth } from "@/components/AuthProvider";
 
 interface ReportDetail {
   id: string;
@@ -45,6 +46,7 @@ interface SimilarReport {
 export default function ReportDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const [report, setReport] = useState<ReportDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCorrectModal, setShowCorrectModal] = useState(false);
@@ -169,18 +171,28 @@ export default function ReportDetailPage() {
             >
               ← Back
             </button>
-            <button
-              onClick={() => setShowCorrectModal(true)}
-              className="h-10 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold uppercase tracking-wider shadow-xs transition-colors"
-            >
-              Correct AI Classification
-            </button>
-            <button
-              onClick={handleConfirm}
-              className="h-10 px-5 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-md shadow-blue-600/20 transition-all active:scale-95"
-            >
-              Confirm &amp; Assign Fix
-            </button>
+
+            {user?.role === "officer" ? (
+              <>
+                <button
+                  onClick={() => setShowCorrectModal(true)}
+                  className="h-10 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold uppercase tracking-wider shadow-xs transition-colors"
+                >
+                  Correct AI Classification
+                </button>
+                <button
+                  onClick={handleConfirm}
+                  className="h-10 px-5 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-md shadow-blue-600/20 transition-all active:scale-95"
+                >
+                  Confirm &amp; Assign Fix
+                </button>
+              </>
+            ) : (
+              <div className="flex items-center gap-2 px-3.5 py-2 bg-blue-50 border border-blue-200 text-[#1D4ED8] rounded-xl text-xs font-bold">
+                <span className="w-2 h-2 rounded-full bg-[#2563EB] animate-pulse"></span>
+                <span>Tracked by HSE Safety Team</span>
+              </div>
+            )}
           </div>
         </div>
 

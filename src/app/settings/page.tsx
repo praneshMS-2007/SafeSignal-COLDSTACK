@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
+import { useAuth } from "@/components/AuthProvider";
+import { useRouter } from "next/navigation";
 
 export default function SettingsPage() {
+  const { user } = useAuth();
+  const router = useRouter();
   const [settings, setSettings] = useState({
     autoStopWork: true,
     notifyOfficerPsif: true,
@@ -14,11 +18,16 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
+    if (user && user.role === "employee") {
+      router.replace("/");
+      return;
+    }
+
     fetch("/api/settings")
       .then((r) => r.json())
       .then(setSettings)
       .catch((err) => console.error("Error loading settings:", err));
-  }, []);
+  }, [user, router]);
 
   const toggle = async (key: string) => {
     const newValue = !(settings as Record<string, boolean | number>)[key];

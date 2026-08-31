@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import Link from "next/link";
+import { useAuth } from "@/components/AuthProvider";
+import { useRouter } from "next/navigation";
 
 interface TriageReport {
   id: string;
@@ -37,6 +39,8 @@ function timeAgo(dateStr: string): string {
 }
 
 export default function TriagePage() {
+  const { user } = useAuth();
+  const router = useRouter();
   const [reports, setReports] = useState<TriageReport[]>([]);
   const [stats, setStats] = useState<TriageStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,6 +49,11 @@ export default function TriagePage() {
   const [siteFilter, setSiteFilter] = useState("ALL");
 
   useEffect(() => {
+    if (user && user.role === "employee") {
+      router.replace("/");
+      return;
+    }
+
     fetch("/api/triage")
       .then((r) => r.json())
       .then((data) => {

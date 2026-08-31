@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import Link from "next/link";
+import { useAuth } from "@/components/AuthProvider";
+import { useRouter } from "next/navigation";
 
 interface BarrierData {
   barrierName: string;
@@ -30,11 +32,18 @@ const LIFE_SAVING_RULES = [
 ];
 
 export default function BarriersPage() {
+  const { user } = useAuth();
+  const router = useRouter();
   const [barriers, setBarriers] = useState<BarrierData[]>([]);
   const [sites, setSites] = useState<SiteData[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (user && user.role === "employee") {
+      router.replace("/");
+      return;
+    }
+
     fetch("/api/barriers")
       .then((r) => r.json())
       .then((data) => {
@@ -43,7 +52,7 @@ export default function BarriersPage() {
       })
       .catch((err) => console.error("Error loading barriers:", err))
       .finally(() => setLoading(false));
-  }, []);
+  }, [user, router]);
 
   const totalMonitored = barriers.length;
   const decliningCount = barriers.filter((b) => b.trend === "DECLINING").length;

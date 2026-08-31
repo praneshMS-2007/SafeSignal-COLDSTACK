@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import Link from "next/link";
+import { useAuth } from "@/components/AuthProvider";
+import { useRouter } from "next/navigation";
 
 interface Ticket {
   id: string;
@@ -21,18 +23,25 @@ interface Ticket {
 }
 
 export default function TicketsPage() {
+  const { user } = useAuth();
+  const router = useRouter();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
+    if (user && user.role === "employee") {
+      router.replace("/");
+      return;
+    }
+
     fetch("/api/tickets")
       .then((r) => r.json())
       .then((data) => (Array.isArray(data) ? setTickets(data) : setTickets([])))
       .catch((err) => console.error("Error loading tickets:", err))
       .finally(() => setLoading(false));
-  }, []);
+  }, [user, router]);
 
   const openCount = tickets.filter((t) => t.status === "OPEN" || t.status === "ASSIGNED").length;
   const watchCount = tickets.filter((t) => t.status === "UNDER_WATCH" || t.status === "FIXED").length;
