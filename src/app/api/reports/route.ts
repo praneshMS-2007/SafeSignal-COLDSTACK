@@ -155,16 +155,26 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 8. Notify officers about PSIF/SIF
-    if (result.classification === "PSIF" || result.classification === "SIF") {
-      const officers = await prisma.user.findMany({ where: { role: "officer" } });
-      for (const officer of officers) {
+    // 8. Notify all safety officers about the new report
+    const officers = await prisma.user.findMany({ where: { role: "officer" } });
+    for (const officer of officers) {
+      if (result.classification === "PSIF" || result.classification === "SIF") {
         await prisma.notification.create({
           data: {
             userId: officer.id,
-            title: `⚠️ ${result.classification} detected at ${site || "unknown site"}`,
-            body: `"${rawText.substring(0, 100)}" — ${result.finalVerdict}`,
+            title: `⚠️ ${result.classification} detected at ${site || "Rig 4"}`,
+            body: `"${rawText.substring(0, 90)}" — ${result.finalVerdict}`,
             type: "STOP_WORK",
+            reportId: report.id,
+          },
+        });
+      } else {
+        await prisma.notification.create({
+          data: {
+            userId: officer.id,
+            title: `New Observation filed at ${site || "Rig 4"} (${result.classification})`,
+            body: `"${rawText.substring(0, 90)}" — ${result.finalVerdict}`,
+            type: "REPORT_TRIAGED",
             reportId: report.id,
           },
         });
