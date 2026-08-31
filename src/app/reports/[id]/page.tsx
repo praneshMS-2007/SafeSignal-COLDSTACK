@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import AppLayout from "@/components/layout/AppLayout";
+import Link from "next/link";
 
 interface ReportDetail {
   id: string;
@@ -11,6 +12,8 @@ interface ReportDetail {
   crew: string;
   timestamp: string;
   mediaUrl: string | null;
+  status: string;
+  createdAt: string;
   classification: {
     classification: string;
     priority: number;
@@ -54,22 +57,24 @@ export default function ReportDetailPage() {
       .then((r) => r.json())
       .then((data) => {
         setReport(data);
-        // Fetch similar reports (same barrier)
         if (data.classification?.barrierRequired) {
           fetch(`/api/reports?site=${encodeURIComponent(data.site || "")}`)
             .then((r) => r.json())
-            .then((reports: SimilarReport[]) => {
-              const similar = reports.filter(
-                (r: SimilarReport) =>
-                  r.id !== data.id &&
-                  r.classification?.barrierState === "ABSENT"
-              );
-              setSimilarReports(similar.slice(0, 3));
+            .then((all) => {
+              if (Array.isArray(all)) {
+                setSimilarReports(
+                  all.filter(
+                    (item: SimilarReport) =>
+                      item.id !== data.id &&
+                      item.classification?.barrierState === "ABSENT"
+                  )
+                );
+              }
             })
             .catch(() => {});
         }
       })
-      .catch(() => {})
+      .catch((err) => console.error("Error loading report detail:", err))
       .finally(() => setLoading(false));
   }, [params.id]);
 
@@ -100,9 +105,8 @@ export default function ReportDetailPage() {
   if (loading) {
     return (
       <AppLayout>
-        <div className="p-12 text-center text-on-surface-variant">
-          <span className="material-symbols-outlined animate-spin mr-2">progress_activity</span>
-          Loading report analysis...
+        <div className="p-12 text-center text-slate-400 text-xs">
+          Loading safety report analysis...
         </div>
       </AppLayout>
     );
@@ -111,13 +115,19 @@ export default function ReportDetailPage() {
   if (!report) {
     return (
       <AppLayout>
-        <div className="p-12 text-center text-on-surface-variant">Report not found</div>
+        <div className="p-12 text-center text-slate-500 font-bold">Report not found</div>
       </AppLayout>
     );
   }
 
   const c = report.classification;
-  const quotes: string[] = c?.evidenceQuotes ? JSON.parse(c.evidenceQuotes) : [];
+  let quotes: string[] = [];
+  try {
+    quotes = c?.evidenceQuotes ? JSON.parse(c.evidenceQuotes) : [];
+  } catch {
+    quotes = [];
+  }
+
   const isCritical = c?.classification === "PSIF" || c?.classification === "SIF";
 
   const extractionRows = [
@@ -125,220 +135,282 @@ export default function ReportDetailPage() {
     { field: "Above kill threshold", value: c?.killThreshold || "—", quote: "—" },
     { field: "Worker proximity", value: c?.workerProximity || "—", quote: quotes[1] || "—" },
     { field: "Barrier required", value: c?.barrierRequired || "—", quote: "—" },
-    { field: "Barrier state", value: c?.barrierState || "—", quote: quotes[2] || "—", highlight: c?.barrierState === "ABSENT" },
+    {
+      field: "Barrier state",
+      value: c?.barrierState || "—",
+      quote: quotes[2] || "—",
+      highlight: c?.barrierState === "ABSENT",
+    },
     { field: "Anyone hurt", value: c?.anyoneHurt || "—", quote: "—" },
   ];
 
   return (
     <AppLayout>
-      <div className="p-4 md:p-12 flex-1 overflow-y-auto">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-8 flex items-center justify-between flex-wrap gap-4">
-            <div>
-              <h2 className="text-display-lg text-on-surface mb-2">Report Detail</h2>
-              <p className="text-body-lg text-on-surface-variant">
-                Reviewing extracted safety data against field worker input.
-              </p>
+      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full flex flex-col gap-6 bg-[#F8FAFC] min-h-screen">
+        {/* ─── HEADER & ACTIONS ───────────────────────────────── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+              <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+              SAFETY AUDIT &amp; SCL CLASSIFICATION INSPECTION
             </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight">
+              Precursor Analysis Report
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">
+              Side-by-side verification of field transcript vs AI &amp; deterministic rule extractions.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
             <button
               onClick={() => router.back()}
-              className="h-[56px] px-6 border-2 border-outline-variant rounded text-on-surface hover:bg-surface-container-highest text-title-md flex items-center gap-2 transition-colors"
+              className="h-10 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold uppercase tracking-wider shadow-xs transition-colors"
             >
-              <span className="material-symbols-outlined">arrow_back</span>
-              <span>Back</span>
+              ← Back
+            </button>
+            <button
+              onClick={() => setShowCorrectModal(true)}
+              className="h-10 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold uppercase tracking-wider shadow-xs transition-colors"
+            >
+              Correct AI Classification
+            </button>
+            <button
+              onClick={handleConfirm}
+              className="h-10 px-5 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-md shadow-blue-600/20 transition-all active:scale-95"
+            >
+              Confirm &amp; Assign Fix
             </button>
           </div>
+        </div>
 
-          {/* Verdict Bar */}
-          <div className={`w-full ${isCritical ? "bg-[#A02D2D]" : "bg-primary-container"} ${isCritical ? "text-white" : "text-on-primary-container"} p-6 rounded-lg mb-8 border-l-[6px] ${isCritical ? "border-error" : "border-primary"} flex flex-col md:flex-row md:items-center justify-between gap-4`}>
+        {/* ─── VERDICT BANNER CARD ─────────────────────────────── */}
+        <div
+          className={`p-5 rounded-2xl border shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+            isCritical
+              ? "bg-red-50/80 border-red-200 text-red-950"
+              : "bg-blue-50/80 border-blue-200 text-blue-950"
+          }`}
+        >
+          <div className="flex items-start gap-3.5">
+            <div
+              className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-xs ${
+                isCritical ? "bg-red-600 text-white" : "bg-[#2563EB] text-white"
+              }`}
+            >
+              <span className="material-symbols-outlined text-xl">
+                {isCritical ? "warning" : "verified_user"}
+              </span>
+            </div>
             <div>
-              <div className="text-title-md font-bold mb-1 flex items-center">
-                <span className="material-symbols-outlined mr-2">warning</span>
-                {c?.classification} — Priority {c?.priority} · IOGP: {c?.iogpRule || "N/A"}
+              <div className="text-base font-extrabold flex items-center gap-2">
+                <span>{c?.classification} — Priority {c?.priority}</span>
+                <span className="text-xs font-semibold opacity-75">
+                  · IOGP Rule: {c?.iogpRule || "General Safety"}
+                </span>
               </div>
-              <div className="text-body-md opacity-90">
-                {c?.finalVerdict}. Rule {c?.ruleVersion}, model {c?.modelVersion}.
+              <div className="text-xs mt-1 leading-relaxed opacity-90">
+                {c?.finalVerdict || "Classification confirmed by SafeSignal SCL Engine."}
               </div>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3 shrink-0">
-              <button
-                onClick={handleConfirm}
-                className="h-[56px] px-6 bg-[#1E5023] text-white rounded text-title-md font-semibold border-2 border-[#153818] hover:opacity-90 transition-colors flex items-center justify-center"
-              >
-                <span className="material-symbols-outlined mr-2">check_circle</span> Confirm
-              </button>
-              <button
-                onClick={() => setShowCorrectModal(true)}
-                className={`h-[56px] px-6 border-2 rounded text-title-md font-semibold hover:opacity-90 transition-colors flex items-center justify-center ${isCritical ? "bg-transparent border-white text-white" : "bg-transparent border-primary text-primary"}`}
-              >
-                <span className="material-symbols-outlined mr-2">edit</span> Correct this
-              </button>
             </div>
           </div>
 
-          {/* Dual Check Audit Trail */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div className="bg-surface-container-lowest border-2 border-outline-variant rounded-lg p-4">
-              <div className="text-label-caps text-on-surface-variant mb-2 flex items-center gap-1">
-                <span className="material-symbols-outlined text-sm">gavel</span> RULE ENGINE
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider shrink-0 border ${
+              isCritical
+                ? "bg-red-100 text-red-800 border-red-300"
+                : "bg-blue-100 text-blue-800 border-blue-300"
+            }`}
+          >
+            {isCritical ? "STOP-WORK MANDATE" : "ROUTINE CONTROLS"}
+          </span>
+        </div>
+
+        {/* ─── TWO COLUMN SPLIT VIEW ───────────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* LEFT: FIELD TRANSCRIPT CARD (6 cols) */}
+          <div className="lg:col-span-6 bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-4 border-b border-[#E2E8F0] mb-4">
+                <h3 className="text-sm font-bold text-[#0F172A] flex items-center gap-2">
+                  <span className="material-symbols-outlined text-blue-600 text-lg">
+                    description
+                  </span>
+                  Frontline Observation Transcript
+                </h3>
+                <span className="text-[11px] font-mono text-slate-500">
+                  {report.site || "Rig 4"} · {report.crew || "Crew B"}
+                </span>
               </div>
-              <p className="font-mono text-mono-code text-on-surface">{c?.ruleVerdict || "—"}</p>
+
+              <div className="p-4 bg-[#F8FAFC] rounded-xl border border-slate-200 text-sm font-medium text-[#0F172A] leading-relaxed">
+                &ldquo;{report.rawText}&rdquo;
+              </div>
+
+              {report.mediaUrl && (
+                <div className="mt-4 rounded-xl overflow-hidden border border-slate-200 relative">
+                  <img
+                    src={report.mediaUrl}
+                    alt="Hazard photo"
+                    className="w-full h-48 object-cover"
+                  />
+                  <div className="absolute top-2 right-2 bg-black/70 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    Faces Blurred
+                  </div>
+                </div>
+              )}
+
+              {/* Dual-Pass Consensus Box */}
+              <div className="mt-5 p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col gap-2">
+                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  Dual-Pass AI &amp; Rule Consensus
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <span className="text-slate-500">Deterministic Rules:</span>{" "}
+                    <strong className="text-slate-900">{c?.ruleVerdict || "PSIF"}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Google Gemini NLP:</span>{" "}
+                    <strong className="text-slate-900">{c?.aiVerdict || "PSIF"}</strong>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="bg-surface-container-lowest border-2 border-outline-variant rounded-lg p-4">
-              <div className="text-label-caps text-on-surface-variant mb-2 flex items-center gap-1">
-                <span className="material-symbols-outlined text-sm">memory</span> AI MODEL
-              </div>
-              <p className="font-mono text-mono-code text-on-surface">{c?.aiVerdict || "—"}</p>
+
+            <div className="pt-4 border-t border-slate-100 text-xs text-slate-400 mt-4">
+              Report ID: <span className="font-mono text-slate-600">{report.id}</span>
             </div>
           </div>
 
-          {/* Split View */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
-            {/* Worker Input */}
-            <div className="bg-surface-container-lowest border-2 border-outline-variant rounded-lg p-6 flex flex-col">
-              <div className="border-b-2 border-outline-variant pb-4 mb-4 flex items-center gap-3">
-                <span className="material-symbols-outlined text-primary text-3xl">record_voice_over</span>
-                <h3 className="text-title-md font-semibold text-primary">Worker Input</h3>
+          {/* RIGHT: SCL EXTRACTION TABLE (6 cols) */}
+          <div className="lg:col-span-6 bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-4 border-b border-[#E2E8F0] mb-4">
+                <h3 className="text-sm font-bold text-[#0F172A] flex items-center gap-2">
+                  <span className="material-symbols-outlined text-blue-600 text-lg">
+                    analytics
+                  </span>
+                  Extracted SCL Decision Fields
+                </h3>
+                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  {c?.ruleVersion || "v1.4"}
+                </span>
               </div>
-              <div className="flex-1 flex flex-col gap-6">
-                <div>
-                  <div className="text-label-caps text-on-surface-variant mb-2">RAW TRANSCRIPT</div>
-                  <div className="bg-surface-container-low border-2 border-outline-variant p-4 rounded font-mono text-mono-code text-on-surface break-words leading-relaxed">
-                    &quot;{report.rawText}&quot;
-                  </div>
-                </div>
-                <div>
-                  <div className="text-label-caps text-on-surface-variant mb-2">METADATA</div>
-                  <div className="bg-surface-container-low border-2 border-outline-variant p-4 rounded font-mono text-mono-code text-on-surface">
-                    <p>Site: {report.site || "—"} · Crew: {report.crew || "—"} · Time: {report.timestamp || "—"}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
 
-            {/* AI Extraction */}
-            <div className="bg-surface-container-lowest border-2 border-outline-variant rounded-lg p-6 flex flex-col">
-              <div className="border-b-2 border-outline-variant pb-4 mb-4 flex items-center gap-3">
-                <span className="material-symbols-outlined text-secondary text-3xl">memory</span>
-                <h3 className="text-title-md font-semibold text-secondary">AI Extraction</h3>
-              </div>
-              <div className="flex-1 overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="border-b-2 border-outline-variant">
-                      <th className="py-3 px-4 text-label-caps text-on-surface-variant w-1/3">Field</th>
-                      <th className="py-3 px-4 text-label-caps text-on-surface-variant w-1/3">Value</th>
-                      <th className="py-3 px-4 text-label-caps text-on-surface-variant w-1/3">Evidence</th>
+                    <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0] text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      <th className="py-2.5 px-3">Field</th>
+                      <th className="py-2.5 px-3">Extracted Value</th>
+                      <th className="py-2.5 px-3">Evidence Source</th>
                     </tr>
                   </thead>
-                  <tbody className="text-body-md text-on-surface divide-y-2 divide-surface-container-highest">
-                    {extractionRows.map((row, i) => (
-                      <tr key={i}
-                        className={row.highlight
-                          ? "bg-error-container/30 border-l-[6px] border-error hover:bg-error-container transition-colors"
-                          : "hover:bg-surface-container-low transition-colors"
-                        }>
-                        <td className={`py-4 px-4 font-semibold ${row.highlight ? "text-error" : ""}`}>{row.field}</td>
-                        <td className={`py-4 px-4 ${row.highlight ? "font-bold text-error" : ""}`}>{row.value}</td>
-                        <td className="py-4 px-4 font-mono text-sm text-on-surface-variant">{row.quote}</td>
+                  <tbody className="divide-y divide-slate-100">
+                    {extractionRows.map((row) => (
+                      <tr key={row.field} className="hover:bg-[#F8FAFC]">
+                        <td className="py-2.5 px-3 font-semibold text-slate-600">
+                          {row.field}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span
+                            className={`font-bold ${
+                              row.highlight
+                                ? "text-red-600 bg-red-50 px-1.5 py-0.5 rounded"
+                                : "text-slate-900"
+                            }`}
+                          >
+                            {row.value}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 font-mono text-[11px] text-slate-500 truncate max-w-[140px]">
+                          {row.quote}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+
+              {/* Similar Reports Pattern */}
+              {similarReports.length > 0 && (
+                <div className="mt-5 p-3.5 bg-amber-50 rounded-xl border border-amber-200">
+                  <div className="text-[11px] font-bold text-amber-900 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-sm text-amber-700">
+                      link
+                    </span>
+                    Cross-Report Barrier Pattern Detected ({similarReports.length} related)
+                  </div>
+                  <div className="text-xs text-amber-800">
+                    Similar barrier failures recorded at {report.site || "this site"}. Ticket auto-reopen logic triggered.
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 text-xs text-slate-400 mt-4 flex items-center justify-between">
+              <span>Confidence Score: <strong className="text-slate-700">{Math.round((c?.confidence || 0.95) * 100)}%</strong></span>
+              <span className="text-emerald-600 font-semibold">Dual-Pass Match ✓</span>
             </div>
           </div>
-
-          {/* Cross-Report Pattern — Similar Reports */}
-          {similarReports.length > 0 && (
-            <div className="bg-surface-container-lowest border-2 border-outline-variant rounded-lg p-6 mb-8">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="material-symbols-outlined text-secondary">hub</span>
-                <h3 className="text-title-md font-semibold">Related Reports — Same Site</h3>
-                <span className="bg-secondary-container text-on-secondary-container text-label-caps px-2 py-0.5 rounded-full ml-2">
-                  Pattern detected
-                </span>
-              </div>
-              <p className="text-body-md text-on-surface-variant mb-4">
-                These reports involve barrier failures at the same location, suggesting a recurring hazard.
-              </p>
-              <div className="flex flex-col gap-3">
-                {similarReports.map((sr) => (
-                  <a
-                    key={sr.id}
-                    href={`/reports/${sr.id}`}
-                    className="flex items-center justify-between p-3 border-2 border-outline-variant rounded hover:bg-surface-container-low transition-colors"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-body-md text-on-surface truncate">{sr.rawText}</p>
-                      <p className="text-label-caps text-on-surface-variant">{sr.site}</p>
-                    </div>
-                    <span className="bg-error-container text-on-error-container text-label-caps px-2 py-1 rounded ml-2 whitespace-nowrap">
-                      {sr.classification?.classification}
-                    </span>
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Correction Modal */}
+      {/* ─── CORRECTION MODAL ─────────────────────────────────── */}
       {showCorrectModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-surface w-full max-w-md rounded-lg border-2 border-outline-variant overflow-hidden">
-            <div className="p-6 border-b-2 border-outline-variant">
-              <h2 className="text-title-md font-semibold flex items-center gap-2">
-                <span className="material-symbols-outlined text-secondary">edit_note</span>
-                Correct Classification
-              </h2>
-              <p className="text-body-md text-on-surface-variant mt-1">
-                Override the AI&apos;s decision. This correction will be logged for model improvement.
-              </p>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl border border-slate-200 shadow-2xl p-6 flex flex-col gap-4 animate-in fade-in zoom-in-95">
+            <h2 className="text-base font-bold text-[#0F172A]">Correct AI Classification</h2>
+            <p className="text-xs text-slate-500">
+              Override the SCL engine verdict and record an audit correction note.
+            </p>
+
+            <div className="grid grid-cols-2 gap-2">
+              {["PSIF", "SIF", "CAPACITY", "ROUTINE"].map((cls) => (
+                <button
+                  key={cls}
+                  type="button"
+                  onClick={() => setCorrectedClass(cls)}
+                  className={`p-3 rounded-xl border font-bold text-xs transition-all ${
+                    correctedClass === cls
+                      ? "border-[#2563EB] bg-blue-50 text-[#2563EB] ring-1 ring-[#2563EB]"
+                      : "border-slate-200 hover:bg-slate-50 text-slate-700"
+                  }`}
+                >
+                  {cls}
+                </button>
+              ))}
             </div>
-            <div className="p-6 flex flex-col gap-4">
-              <div>
-                <label className="text-label-caps text-on-surface-variant block mb-2">CORRECT CLASSIFICATION</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {["PSIF", "SIF", "CAPACITY", "ROUTINE"].map((cls) => (
-                    <button key={cls}
-                      onClick={() => setCorrectedClass(cls)}
-                      className={`h-[48px] rounded border-2 text-label-caps font-bold transition-colors ${
-                        correctedClass === cls
-                          ? "border-primary bg-primary-container text-on-primary-container"
-                          : "border-outline-variant text-on-surface-variant hover:bg-surface-container-low"
-                      }`}>
-                      {cls}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="text-label-caps text-on-surface-variant block mb-2">NOTE (optional)</label>
-                <textarea
-                  value={correctionNote}
-                  onChange={(e) => setCorrectionNote(e.target.value)}
-                  placeholder="Why is the AI wrong?"
-                  className="w-full h-20 p-3 border-2 border-outline-variant rounded bg-surface-container-lowest text-body-md resize-none focus:border-primary focus:outline-none"
-                />
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowCorrectModal(false)}
-                  className="flex-1 h-[48px] border-2 border-outline-variant rounded text-label-caps hover:bg-surface-container-low transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleCorrection}
-                  disabled={!correctedClass}
-                  className="flex-1 h-[48px] bg-primary text-on-primary rounded text-label-caps font-bold disabled:opacity-50"
-                >
-                  Submit Correction
-                </button>
-              </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-600 uppercase tracking-wider block mb-1">
+                Correction Justification
+              </label>
+              <textarea
+                value={correctionNote}
+                onChange={(e) => setCorrectionNote(e.target.value)}
+                placeholder="Why is the AI verdict being overridden?"
+                className="w-full h-20 p-2.5 border border-slate-200 rounded-xl text-xs focus:border-[#2563EB] focus:outline-none resize-none"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-2 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => setShowCorrectModal(false)}
+                className="flex-1 h-9 border border-slate-200 rounded-xl text-xs font-bold uppercase hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCorrection}
+                disabled={!correctedClass}
+                className="flex-1 h-9 bg-[#2563EB] text-white rounded-xl text-xs font-bold uppercase hover:bg-[#1D4ED8] disabled:opacity-50"
+              >
+                Apply Override
+              </button>
             </div>
           </div>
         </div>

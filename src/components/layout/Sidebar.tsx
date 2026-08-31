@@ -5,14 +5,24 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { useEffect, useState } from "react";
 
-const navItems = [
-  { href: "/triage", icon: "fact_check", label: "Triage", roles: ["officer"] },
-  { href: "/reports", icon: "analytics", label: "My Reports", roles: ["employee", "officer"] },
+interface NavItem {
+  href: string;
+  icon: string;
+  label: string;
+  roles: ("employee" | "officer")[];
+  badge?: number;
+}
+
+const navItems: NavItem[] = [
+  { href: "/", icon: "dashboard", label: "Dashboard", roles: ["employee", "officer"] },
+  { href: "/triage", icon: "fact_check", label: "Triage Queue", roles: ["officer"] },
+  { href: "/report", icon: "add_alert", label: "Report Hazard", roles: ["employee", "officer"] },
+  { href: "/reports", icon: "analytics", label: "Safety Reports", roles: ["employee", "officer"] },
   { href: "/barriers", icon: "health_and_safety", label: "Barrier Health", roles: ["officer"] },
-  { href: "/tickets", icon: "confirmation_number", label: "Tickets", roles: ["officer"] },
+  { href: "/tickets", icon: "confirmation_number", label: "Repair Tickets", roles: ["officer"] },
   { href: "/users", icon: "manage_accounts", label: "User Management", roles: ["officer"] },
   { href: "/notifications", icon: "notifications", label: "Notifications", roles: ["employee", "officer"] },
-  { href: "/settings", icon: "settings", label: "Settings", roles: ["officer"] },
+  { href: "/settings", icon: "settings", label: "System Settings", roles: ["officer"] },
 ];
 
 export default function Sidebar() {
@@ -33,80 +43,102 @@ export default function Sidebar() {
   );
 
   return (
-    <nav className="hidden lg:flex flex-col h-screen w-80 border-r-2 border-outline-variant bg-surface-container-low p-gutter sticky top-0 shrink-0">
-      {/* Brand */}
-      <div className="mb-8">
-        <Link href="/">
-          <h1 className="text-headline-lg font-bold text-primary flex items-center gap-3">
-            <span className="material-symbols-outlined filled text-4xl">oil_barrel</span>
-            SafeSignal
-          </h1>
+    <aside className="hidden lg:flex flex-col h-screen w-72 bg-[#0B1727] text-white p-5 sticky top-0 shrink-0 border-r border-[#1E293B] shadow-xl z-30 select-none justify-between">
+      {/* ─── TOP SECTION: BRAND BADGE ─────────────────────────── */}
+      <div className="flex flex-col gap-6">
+        {/* Brand Card matching Template */}
+        <Link href="/" className="group block">
+          <div className="bg-white rounded-2xl p-3.5 flex items-center gap-3 shadow-lg shadow-black/20 border border-slate-200/80 transition-transform group-hover:scale-[1.02]">
+            <div className="w-10 h-10 rounded-xl bg-[#03224D] flex items-center justify-center text-white shrink-0 shadow-md">
+              <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8 0-2.45 1.11-4.65 2.87-6.12.33-.28.78-.34 1.16-.16.39.18.63.57.63.99v1.5c0 .55.45 1 1 1s1-.45 1-1V6.5c0-.42.24-.81.63-.99.38-.18.83-.12 1.16.16 1.76 1.47 2.87 3.67 2.87 6.12 0 4.41-3.59 8-8 8z" />
+              </svg>
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-base font-extrabold tracking-tight text-[#0F172A] flex items-center justify-between">
+                <span>SafeSignal</span>
+                <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 bg-[#EEF2F6] text-[#2563EB] rounded border border-[#CBD5E1]">
+                  OIL INDIA
+                </span>
+              </div>
+              <div className="text-[10px] font-semibold tracking-wider text-slate-500 uppercase truncate">
+                Industrial Safety ERP
+              </div>
+            </div>
+          </div>
         </Link>
+
+        {/* Navigation Items */}
+        <div className="flex flex-col gap-1.5">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-1">
+            Core Modules
+          </div>
+
+          <nav className="flex flex-col gap-1">
+            {visibleItems.map((item) => {
+              const isActive =
+                item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+              const showBadge = item.href === "/notifications" && unreadCount > 0;
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 relative ${
+                    isActive
+                      ? "bg-[#2563EB] text-white shadow-lg shadow-blue-600/30"
+                      : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/60"
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[20px] shrink-0">
+                    {item.icon}
+                  </span>
+                  <span className="flex-1 truncate">{item.label}</span>
+
+                  {showBadge && (
+                    <span className="bg-[#EF4444] text-white text-[11px] font-bold px-2 py-0.5 rounded-full shadow-xs">
+                      {unreadCount}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
       </div>
 
-      {/* User card */}
+      {/* ─── BOTTOM SECTION: USER PROFILE PILL ─────────────────── */}
       {user && (
-        <div className="flex items-center gap-4 mb-8 p-4 bg-surface rounded-lg border-2 border-outline-variant">
-          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-title-md font-semibold ${
-            user.role === "officer"
-              ? "bg-secondary-container text-on-secondary-container"
-              : "bg-primary-container text-on-primary-container"
-          }`}>
-            {user.displayName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-title-md font-semibold text-on-surface truncate">{user.displayName}</div>
-            <div className="text-body-md text-on-surface-variant truncate">{user.site || "No site"}</div>
-            <div className={`text-label-caps flex items-center gap-1 mt-1 ${
-              user.role === "officer" ? "text-secondary" : "text-on-tertiary-container"
-            }`}>
-              <span className="material-symbols-outlined" style={{ fontSize: 12 }}>
-                {user.role === "officer" ? "shield_person" : "hard_hat"}
-              </span>
-              {user.role === "officer" ? "SAFETY OFFICER" : "EMPLOYEE"}
+        <div className="pt-4 border-t border-slate-800/80">
+          <div className="flex items-center justify-between bg-slate-900/90 rounded-xl p-2.5 border border-slate-800 shadow-inner">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#2563EB] to-[#60A5FA] flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-sm uppercase">
+                {user.displayName
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .slice(0, 2)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-bold text-slate-100 truncate">
+                  {user.displayName}
+                </div>
+                <div className="text-[10px] text-blue-400 uppercase font-semibold tracking-wider truncate">
+                  {user.role === "officer" ? "SUPER_ADMIN" : "FIELD_STAFF"}
+                </div>
+              </div>
             </div>
+
+            <button
+              onClick={logout}
+              title="Sign Out"
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors shrink-0"
+            >
+              <span className="material-symbols-outlined text-[18px]">logout</span>
+            </button>
           </div>
         </div>
       )}
-
-      {/* Navigation links */}
-      <ul className="flex flex-col gap-2 flex-grow">
-        {visibleItems.map((item) => {
-          const isActive = pathname.startsWith(item.href);
-          const showBadge = item.href === "/notifications" && unreadCount > 0;
-          return (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200 relative ${
-                  isActive
-                    ? "bg-secondary-container text-on-secondary-container border-l-4 border-secondary font-bold"
-                    : "text-on-surface-variant hover:bg-surface-container-highest border-l-4 border-transparent"
-                }`}
-              >
-                <span className={`material-symbols-outlined ${isActive ? "filled" : ""}`}>
-                  {item.icon}
-                </span>
-                <span className="text-title-md">{item.label}</span>
-                {showBadge && (
-                  <span className="ml-auto bg-error text-on-error text-xs font-bold px-2 py-0.5 rounded-full">
-                    {unreadCount}
-                  </span>
-                )}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-
-      {/* Logout */}
-      <button
-        onClick={logout}
-        className="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-error-container hover:text-on-error-container transition-colors mt-4"
-      >
-        <span className="material-symbols-outlined">logout</span>
-        <span className="text-title-md">Sign Out</span>
-      </button>
-    </nav>
+    </aside>
   );
 }

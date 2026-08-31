@@ -18,38 +18,44 @@ export default function BottomNav() {
       .catch(() => {});
   }, [pathname, user]);
 
-  const items = user?.role === "officer"
-    ? [
-        { href: "/", icon: "home", label: "Home" },
-        { href: "/triage", icon: "fact_check", label: "Triage" },
-        { href: "/notifications", icon: "notifications", label: "Alerts", badge: unread },
-      ]
-    : [
-        { href: "/", icon: "home", label: "Home" },
-        { href: "/report", icon: "add_circle", label: "Report" },
-        { href: "/notifications", icon: "notifications", label: "Alerts", badge: unread },
-      ];
+  const items =
+    user?.role === "officer"
+      ? [
+          { href: "/", icon: "dashboard", label: "Overview" },
+          { href: "/triage", icon: "fact_check", label: "Triage" },
+          { href: "/barriers", icon: "health_and_safety", label: "Barriers" },
+          { href: "/users", icon: "manage_accounts", label: "Users" },
+          { href: "/notifications", icon: "notifications", label: "Alerts", badge: unread },
+        ]
+      : [
+          { href: "/", icon: "dashboard", label: "Overview" },
+          { href: "/report", icon: "add_circle", label: "Report" },
+          { href: "/reports", icon: "analytics", label: "My Log" },
+          { href: "/notifications", icon: "notifications", label: "Alerts", badge: unread },
+        ];
 
   return (
-    <nav className="fixed bottom-0 left-0 w-full flex justify-around items-center bg-surface border-t-2 border-outline-variant z-50 h-[56px] lg:hidden">
+    <nav className="fixed bottom-0 left-0 w-full flex justify-around items-center bg-[#0B1727] border-t border-slate-800 z-50 h-16 lg:hidden px-2 shadow-2xl">
       {items.map((item) => {
-        const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+        const isActive =
+          item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+
         return (
-          <Link key={item.href} href={item.href}
-            className={`flex flex-col items-center justify-center w-16 h-full transition-all relative ${
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`flex flex-col items-center justify-center flex-1 h-12 rounded-xl transition-all relative ${
               isActive
-                ? "text-on-primary-container"
-                : "text-on-surface-variant hover:bg-surface-container"
-            }`}>
-            {isActive && (
-              <div className="absolute top-1 bg-primary-container rounded-full px-4 py-0.5"></div>
-            )}
-            <span className={`material-symbols-outlined mb-0.5 ${isActive ? "filled" : ""}`}>
+                ? "bg-[#2563EB] text-white shadow-md shadow-blue-500/30"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <span className="material-symbols-outlined text-[20px] mb-0.5">
               {item.icon}
             </span>
-            <span className="text-label-caps text-[10px]">{item.label}</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider">{item.label}</span>
             {item.badge && item.badge > 0 ? (
-              <span className="absolute top-0 right-2 bg-error text-on-error text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full">
+              <span className="absolute top-1 right-3 bg-[#EF4444] text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full shadow-xs">
                 {item.badge > 9 ? "9+" : item.badge}
               </span>
             ) : null}

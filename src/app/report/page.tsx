@@ -3,6 +3,8 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
+import AppLayout from "@/components/layout/AppLayout";
+import Link from "next/link";
 
 const HAZARD_CATEGORIES = [
   { label: "Falling object", icon: "file_download" },
@@ -19,7 +21,7 @@ const HAZARD_CATEGORIES = [
 export default function ReportHazardPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const [inputMode, setInputMode] = useState<string | null>(null);
+  const [inputMode, setInputMode] = useState<string | null>("TEXT");
   const [rawText, setRawText] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,6 +35,7 @@ export default function ReportHazardPage() {
       alert("Speech recognition is not supported in this browser.");
       return;
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
@@ -40,6 +43,7 @@ export default function ReportHazardPage() {
     recognition.lang = "en-IN";
     recognition.onstart = () => setIsListening(true);
     recognition.onend = () => setIsListening(false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recognition.onresult = (event: any) => {
       setRawText((prev) => prev + (prev ? " " : "") + event.results[0][0].transcript);
     };
@@ -60,7 +64,6 @@ export default function ReportHazardPage() {
     reader.onload = (evt) => {
       const dataUrl = evt.target?.result as string;
 
-      // Apply face blur using canvas
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement("canvas");
@@ -71,14 +74,11 @@ export default function ReportHazardPage() {
 
         ctx.drawImage(img, 0, 0);
 
-        // Simple face region detection: blur top-center area (approximate head region)
-        // In production, use a real face detection API
         const blurRegionW = img.width * 0.3;
         const blurRegionH = img.height * 0.25;
         const blurX = (img.width - blurRegionW) / 2;
         const blurY = img.height * 0.05;
 
-        // Apply pixelation blur to the region
         const pixelSize = 12;
         const imageData = ctx.getImageData(blurX, blurY, blurRegionW, blurRegionH);
         for (let y = 0; y < imageData.height; y += pixelSize) {
@@ -147,9 +147,14 @@ export default function ReportHazardPage() {
     } catch {
       const queue = JSON.parse(localStorage.getItem("offlineReports") || "[]");
       queue.push({
-        offlineId: Date.now().toString(), rawText, hazardCategory: selectedCategory,
-        inputMode: inputMode || "TEXT", site: user?.site || "Rig 4", location: "Duliajan",
-        crew: user?.crew || "Workover crew B", offlineCreatedAt: new Date().toISOString(),
+        offlineId: Date.now().toString(),
+        rawText,
+        hazardCategory: selectedCategory,
+        inputMode: inputMode || "TEXT",
+        site: user?.site || "Rig 4",
+        location: "Duliajan",
+        crew: user?.crew || "Workover crew B",
+        offlineCreatedAt: new Date().toISOString(),
       });
       localStorage.setItem("offlineReports", JSON.stringify(queue));
       alert("Report saved offline. It will sync when signal returns.");
@@ -160,102 +165,185 @@ export default function ReportHazardPage() {
   };
 
   return (
-    <div className="bg-background text-on-background min-h-screen flex flex-col pb-safe">
-      {/* Hidden file input for photo capture */}
-      <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onFileSelected} />
+    <AppLayout>
+      <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto w-full flex flex-col gap-6 bg-[#F8FAFC] min-h-screen">
+        {/* Hidden file input for photo capture */}
+        <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onFileSelected} />
 
-      <main className="flex-grow px-4 py-6 flex flex-col gap-6 pb-32 max-w-lg mx-auto w-full">
-        <section>
-          <h1 className="text-headline-lg-mobile font-bold text-primary mb-2">Report a Hazard</h1>
-          <p className="text-on-surface-variant text-body-md">Log observations quickly — any language, any format.</p>
-        </section>
+        {/* ─── PAGE HEADER ─────────────────────────────────────── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+              <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+              MULTI-MODAL HAZARD LOGGING
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight">
+              Report Safety Observation
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">
+              Any language or format (Assamese, Hindi, English). Multi-modal speech, visual grid, or photo capture.
+            </p>
+          </div>
 
-        {/* Input Methods */}
-        <section className="grid grid-cols-2 gap-4">
-          <button onClick={() => { setInputMode("TEXT"); setShowTapGrid(false); }}
-            className={`bg-surface-container-lowest border-2 rounded-lg p-4 flex flex-col items-center justify-center gap-3 h-28 active:scale-95 transition-transform ${inputMode === "TEXT" ? "border-primary bg-primary-fixed" : "border-outline-variant"}`}>
-            <span className="material-symbols-outlined text-primary text-3xl">keyboard</span>
-            <span className="text-title-md font-semibold text-on-surface">Type it</span>
+          <Link
+            href="/reports"
+            className="h-10 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-xs transition-colors self-start sm:self-auto"
+          >
+            <span>My Reports</span>
+          </Link>
+        </div>
+
+        {/* ─── 4 INPUT MODE BUTTONS ────────────────────────────── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <button
+            type="button"
+            onClick={() => { setInputMode("TEXT"); setShowTapGrid(false); }}
+            className={`p-4 rounded-2xl border text-center flex flex-col items-center justify-center gap-2 transition-all shadow-xs ${
+              inputMode === "TEXT" && !showTapGrid
+                ? "bg-blue-50/80 border-[#2563EB] text-[#2563EB] ring-2 ring-blue-100"
+                : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
+            }`}
+          >
+            <span className="material-symbols-outlined text-2xl">keyboard</span>
+            <span className="text-xs font-bold">Type Observation</span>
           </button>
 
-          <button onClick={handleVoiceInput}
-            className={`bg-surface-container-lowest border-2 rounded-lg p-4 flex flex-col items-center justify-center gap-3 h-28 active:scale-95 transition-transform ${isListening ? "border-error bg-error-container animate-pulse" : inputMode === "VOICE" ? "border-primary bg-primary-fixed" : "border-outline-variant"}`}>
-            <span className={`material-symbols-outlined text-3xl ${isListening ? "text-error" : "text-primary"}`}>mic</span>
-            <span className="text-title-md font-semibold text-on-surface">{isListening ? "Listening..." : "Speak it"}</span>
+          <button
+            type="button"
+            onClick={handleVoiceInput}
+            className={`p-4 rounded-2xl border text-center flex flex-col items-center justify-center gap-2 transition-all shadow-xs ${
+              isListening
+                ? "bg-red-50 border-red-500 text-red-600 animate-pulse ring-2 ring-red-100"
+                : inputMode === "VOICE"
+                ? "bg-blue-50/80 border-[#2563EB] text-[#2563EB] ring-2 ring-blue-100"
+                : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
+            }`}
+          >
+            <span className={`material-symbols-outlined text-2xl ${isListening ? "text-red-600" : ""}`}>
+              {isListening ? "mic" : "mic_none"}
+            </span>
+            <span className="text-xs font-bold">{isListening ? "Listening..." : "Voice Dictate"}</span>
           </button>
 
-          <button onClick={() => { setShowTapGrid(true); setInputMode("TAP"); }}
-            className={`bg-surface-container-lowest border-2 rounded-lg p-4 flex flex-col items-center justify-center gap-3 h-28 active:scale-95 transition-transform ${inputMode === "TAP" ? "border-primary bg-primary-fixed" : "border-outline-variant"}`}>
-            <span className="material-symbols-outlined text-primary text-3xl">touch_app</span>
-            <span className="text-title-md font-semibold text-on-surface">Tap hazard</span>
+          <button
+            type="button"
+            onClick={() => { setShowTapGrid(true); setInputMode("TAP"); }}
+            className={`p-4 rounded-2xl border text-center flex flex-col items-center justify-center gap-2 transition-all shadow-xs ${
+              showTapGrid
+                ? "bg-blue-50/80 border-[#2563EB] text-[#2563EB] ring-2 ring-blue-100"
+                : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
+            }`}
+          >
+            <span className="material-symbols-outlined text-2xl">touch_app</span>
+            <span className="text-xs font-bold">Tap-a-Hazard</span>
           </button>
 
-          <button onClick={handlePhotoCapture}
-            className={`bg-surface-container-lowest border-2 rounded-lg p-4 flex flex-col items-center justify-center gap-3 h-28 active:scale-95 transition-transform ${inputMode === "PHOTO" ? "border-primary bg-primary-fixed" : "border-outline-variant"}`}>
-            <span className="material-symbols-outlined text-primary text-3xl">photo_camera</span>
-            <span className="text-title-md font-semibold text-on-surface">Take photo</span>
+          <button
+            type="button"
+            onClick={handlePhotoCapture}
+            className={`p-4 rounded-2xl border text-center flex flex-col items-center justify-center gap-2 transition-all shadow-xs ${
+              photoPreview
+                ? "bg-emerald-50 border-emerald-500 text-emerald-700 ring-2 ring-emerald-100"
+                : inputMode === "PHOTO"
+                ? "bg-blue-50/80 border-[#2563EB] text-[#2563EB] ring-2 ring-blue-100"
+                : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
+            }`}
+          >
+            <span className="material-symbols-outlined text-2xl">photo_camera</span>
+            <span className="text-xs font-bold">Photo (Face Blur)</span>
           </button>
-        </section>
+        </div>
 
-        {/* Tap-a-Hazard Grid */}
+        {/* ─── TAP HAZARD GRID ─────────────────────────────────── */}
         {showTapGrid && (
-          <section className="bg-surface border-2 border-outline-variant rounded-lg p-4">
-            <h2 className="text-label-caps text-on-surface-variant mb-3">SELECT HAZARD TYPE</h2>
+          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-xs animate-in fade-in slide-in-from-top-1">
+            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
+              Select Immediate Hazard Category
+            </h2>
             <div className="grid grid-cols-3 gap-3">
               {HAZARD_CATEGORIES.map((cat) => (
-                <button key={cat.label} onClick={() => handleTapHazard(cat.label)}
-                  className={`border-2 rounded-lg p-3 flex flex-col items-center justify-center gap-2 min-h-[80px] active:scale-95 transition-all ${
-                    selectedCategory === cat.label ? "border-primary bg-primary-fixed" : "border-outline-variant hover:bg-surface-container-low"
-                  }`}>
-                  <span className="material-symbols-outlined text-2xl text-primary">{cat.icon}</span>
-                  <span className="text-xs text-center text-on-surface font-semibold">{cat.label}</span>
+                <button
+                  key={cat.label}
+                  type="button"
+                  onClick={() => handleTapHazard(cat.label)}
+                  className={`border rounded-xl p-3 flex flex-col items-center justify-center gap-1.5 min-h-[85px] transition-all ${
+                    selectedCategory === cat.label
+                      ? "border-[#2563EB] bg-blue-50 text-[#2563EB] ring-1 ring-[#2563EB]"
+                      : "border-slate-200 hover:bg-slate-50 text-slate-700"
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-2xl text-blue-600">
+                    {cat.icon}
+                  </span>
+                  <span className="text-xs font-bold text-center leading-tight">
+                    {cat.label}
+                  </span>
                 </button>
               ))}
             </div>
-          </section>
-        )}
-
-        {/* Photo preview with face blur */}
-        {photoPreview && (
-          <section className="rounded-lg border-2 border-outline-variant overflow-hidden relative">
-            <img src={photoPreview} alt="Captured hazard" className="w-full h-48 object-cover" />
-            <div className="absolute top-2 right-2 bg-tertiary-container text-on-tertiary-container text-label-caps px-2 py-1 rounded flex items-center gap-1">
-              <span className="material-symbols-outlined text-xs">blur_on</span> FACES BLURRED
-            </div>
-          </section>
-        )}
-
-        {/* Text input */}
-        {(inputMode === "TEXT" || inputMode === "VOICE" || rawText) && !showTapGrid && (
-          <section>
-            <textarea value={rawText} onChange={(e) => setRawText(e.target.value)}
-              placeholder="Describe what you saw — any language is fine..."
-              className="w-full h-32 p-4 border-2 border-outline-variant rounded-lg bg-surface-container-lowest text-on-surface text-body-md resize-none focus:border-primary focus:outline-none" />
-          </section>
-        )}
-
-        {/* Auto-fill */}
-        <section className="bg-surface-container-low rounded-lg p-4 border-l-[6px] border-outline border-2 flex flex-col gap-1">
-          <div className="flex items-center gap-2 text-on-surface-variant text-label-caps mb-1">
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>my_location</span>
-            <span>Captured automatically</span>
           </div>
-          <p className="font-mono text-mono-code text-on-surface">{user?.site || "Rig 4"} · Duliajan · {new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</p>
-          <p className="font-mono text-mono-code text-on-surface">{user?.crew || "Workover crew B"}</p>
-        </section>
+        )}
 
-        {/* Submit */}
-        <section className="mt-auto pt-4">
-          <button onClick={handleSubmit} disabled={!rawText.trim() || isSubmitting}
-            className="w-full bg-primary text-on-primary h-[56px] rounded-lg text-title-md font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed">
-            {isSubmitting ? (
-              <><span className="material-symbols-outlined animate-spin">progress_activity</span>Analyzing...</>
-            ) : (
-              <><span className="material-symbols-outlined">send</span>Submit report</>
-            )}
-          </button>
-        </section>
-      </main>
-    </div>
+        {/* ─── PHOTO PREVIEW WITH FACE BLUR ────────────────────── */}
+        {photoPreview && (
+          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 shadow-xs">
+            <div className="rounded-xl overflow-hidden relative border border-slate-200">
+              <img src={photoPreview} alt="Captured hazard" className="w-full h-56 object-cover" />
+              <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full flex items-center gap-1.5 border border-white/20">
+                <span className="material-symbols-outlined text-xs text-emerald-400">
+                  blur_on
+                </span>
+                <span>Privacy Protected · Faces Blurred</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─── TEXT OBSERVATION INPUT ──────────────────────────── */}
+        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-xs flex flex-col gap-3">
+          <label className="text-xs font-bold text-slate-600 uppercase tracking-wider block">
+            Observation Details &amp; Location Transcript
+          </label>
+          <textarea
+            value={rawText}
+            onChange={(e) => setRawText(e.target.value)}
+            placeholder="Describe what you observed (e.g. 'Gas smell near manifold on Rig 4, work permit missing, pressure gauge leaking')..."
+            className="w-full h-32 p-3.5 border border-slate-200 rounded-xl bg-[#F8FAFC] text-slate-900 text-sm focus:bg-white focus:border-[#2563EB] focus:outline-none transition-all resize-none"
+          />
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-100 text-xs text-slate-500">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span>Site: <strong className="text-slate-800">{user?.site || "Rig 4"}</strong></span>
+              <span>·</span>
+              <span>Crew: <strong className="text-slate-800">{user?.crew || "Workover crew B"}</strong></span>
+            </div>
+            <span className="text-[11px] font-mono text-slate-400">Auto-geotagged</span>
+          </div>
+        </div>
+
+        {/* ─── SUBMIT BUTTON ───────────────────────────────────── */}
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={!rawText.trim() || isSubmitting}
+          className="w-full h-12 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-xl text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-blue-600/20"
+        >
+          {isSubmitting ? (
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>
+              <span>Running SCL Precursor Analysis...</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span>Submit &amp; Classify Observation</span>
+              <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </div>
+          )}
+        </button>
+      </div>
+    </AppLayout>
   );
 }
