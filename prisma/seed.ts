@@ -19,7 +19,7 @@ async function main() {
   await prisma.user.deleteMany();
 
   // ─── Demo Users ───────────────────────────────────────────────
-  const passwordHash = await bcrypt.hash("password", 10);
+  const passwordHash = await bcrypt.hash("12345678", 10);
 
   const admin = await prisma.user.create({
     data: { username: "admin", passwordHash, displayName: "H.S. Bora (HSE Admin)", role: "officer", site: "Duliajan HQ", crew: "HSE Inspection Team" },
@@ -39,7 +39,7 @@ async function main() {
   const worker4 = await prisma.user.create({
     data: { username: "worker4", passwordHash, displayName: "Bipul Saikia", role: "employee", site: "Rig 7", crew: "Wellhead crew" },
   });
-  console.log(`  ✓ 6 demo users created (admin, officer1, worker1, worker2, worker3, worker4 — password: "password")`);
+  console.log(`  ✓ 6 demo users created (admin, officer1, worker1, worker2, worker3, worker4 — password: "12345678")`);
 
   // ─── Sites ────────────────────────────────────────────────────
   await Promise.all([

@@ -191,30 +191,45 @@ export default function LoginPage() {
                 </span>
                 <span className="text-[11px] text-[#94A3B8]">Click to populate</span>
               </div>
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={() => handleQuickFill("officer1", "password")}
-                  className="bg-[#F8FAFC] border-2 border-[#E2E8F0] hover:border-[#2563EB] hover:bg-[#EFF6FF] p-2.5 rounded-xl text-left transition-all group"
+                  onClick={() => handleQuickFill("admin", "12345678")}
+                  className="bg-[#F8FAFC] border-2 border-[#E2E8F0] hover:border-[#2563EB] hover:bg-[#EFF6FF] p-2 rounded-xl text-left transition-all group"
                 >
-                  <div className="text-xs font-bold text-[#0F172A] group-hover:text-[#2563EB] flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-base text-[#2563EB]">shield_person</span>
-                    Safety Officer
+                  <div className="text-xs font-bold text-[#0F172A] group-hover:text-[#2563EB] flex items-center gap-1">
+                    <span className="material-symbols-outlined text-sm text-[#2563EB]">admin_panel_settings</span>
+                    HSE Admin
                   </div>
-                  <div className="text-[11px] text-[#64748B] font-mono mt-0.5">officer1 / password</div>
+                  <div className="text-[10px] text-[#64748B] font-mono mt-0.5">admin</div>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => handleQuickFill("worker1", "password")}
-                  className="bg-[#F8FAFC] border-2 border-[#E2E8F0] hover:border-[#2563EB] hover:bg-[#EFF6FF] p-2.5 rounded-xl text-left transition-all group"
+                  onClick={() => handleQuickFill("officer1", "12345678")}
+                  className="bg-[#F8FAFC] border-2 border-[#E2E8F0] hover:border-[#2563EB] hover:bg-[#EFF6FF] p-2 rounded-xl text-left transition-all group"
                 >
-                  <div className="text-xs font-bold text-[#0F172A] group-hover:text-[#2563EB] flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-base text-[#03224D]">hard_hat</span>
-                    Field Worker
+                  <div className="text-xs font-bold text-[#0F172A] group-hover:text-[#2563EB] flex items-center gap-1">
+                    <span className="material-symbols-outlined text-sm text-[#2563EB]">shield_person</span>
+                    Officer
                   </div>
-                  <div className="text-[11px] text-[#64748B] font-mono mt-0.5">worker1 / password</div>
+                  <div className="text-[10px] text-[#64748B] font-mono mt-0.5">officer1</div>
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleQuickFill("worker1", "12345678")}
+                  className="bg-[#F8FAFC] border-2 border-[#E2E8F0] hover:border-[#2563EB] hover:bg-[#EFF6FF] p-2 rounded-xl text-left transition-all group"
+                >
+                  <div className="text-xs font-bold text-[#0F172A] group-hover:text-[#2563EB] flex items-center gap-1">
+                    <span className="material-symbols-outlined text-sm text-[#03224D]">hard_hat</span>
+                    Employee
+                  </div>
+                  <div className="text-[10px] text-[#64748B] font-mono mt-0.5">worker1</div>
+                </button>
+              </div>
+              <div className="text-center text-[11px] text-[#64748B] mt-2 font-mono">
+                Default demo password: <span className="font-bold text-[#0F172A]">12345678</span>
               </div>
             </div>
 
