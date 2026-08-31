@@ -21,11 +21,12 @@ export default function Sidebar() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
+    if (!user) return;
     fetch("/api/notifications")
       .then((r) => r.json())
       .then((data) => setUnreadCount(data.unreadCount || 0))
       .catch(() => {});
-  }, [pathname]);
+  }, [pathname, user]);
 
   const visibleItems = navItems.filter(
     (item) => user && item.roles.includes(user.role)

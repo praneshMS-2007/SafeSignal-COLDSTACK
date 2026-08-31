@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { useAuth } from "@/components/AuthProvider";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { loginUser } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -30,17 +32,17 @@ export default function LoginPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) {
+      if (!res.ok || !data.user) {
         setError(data.error || "Invalid username or password. Check credentials.");
         return;
       }
 
-      // Role-based automatic redirect
-      if (data.user?.role === "officer") {
-        router.push("/triage");
-      } else {
-        router.push("/");
-      }
+      // Synchronize in-memory auth state
+      loginUser(data.user);
+
+      // Navigate to destination
+      const targetUrl = data.user.role === "officer" ? "/triage" : "/";
+      window.location.href = targetUrl;
     } catch {
       setError("Unable to reach server. Please check your network connection.");
     } finally {

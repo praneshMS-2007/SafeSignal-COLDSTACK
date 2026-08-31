@@ -1,22 +1,27 @@
-/// <reference lib="webworker" />
+// SafeSignal Service Worker v2 (Production safe)
 
-const CACHE_NAME = "safesignal-v1";
+const CACHE_NAME = "safesignal-v2";
 const OFFLINE_QUEUE_KEY = "safesignal-offline-queue";
 
 const STATIC_ASSETS = [
-  "/",
-  "/report",
-  "/triage",
-  "/reports",
-  "/barriers",
-  "/tickets",
   "/manifest.json",
+  "/icon-192.png",
+  "/icon-512.png",
+  "/images/oil_safety_banner.jpg",
 ];
 
-// Install: cache static assets
+// Install: cache public static assets safely
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
+    caches.open(CACHE_NAME).then((cache) => {
+      return Promise.allSettled(
+        STATIC_ASSETS.map((url) =>
+          fetch(url).then((res) => {
+            if (res.ok) return cache.put(url, res);
+          }).catch(() => {})
+        )
+      );
+    })
   );
   self.skipWaiting();
 });
@@ -33,61 +38,65 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Fetch: network-first for API, cache-first for static
+// Fetch handler
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  // API requests: try network first
-  if (url.pathname.startsWith("/api/")) {
-    // For POST to /api/reports when offline, queue it
+  // Skip non-GET requests (except offline report queueing)
+  if (event.request.method !== "GET") {
     if (event.request.method === "POST" && url.pathname === "/api/reports") {
       event.respondWith(
         fetch(event.request.clone()).catch(async () => {
-          // Queue for later sync
-          const body = await event.request.json();
-          const queue = JSON.parse(
-            (await getFromCache(OFFLINE_QUEUE_KEY)) || "[]"
-          );
-          queue.push({
-            ...body,
-            offlineId: Date.now().toString(),
-            offlineCreatedAt: new Date().toISOString(),
-          });
-          await putInCache(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+          try {
+            const body = await event.request.json();
+            const queue = JSON.parse((await getFromCache(OFFLINE_QUEUE_KEY)) || "[]");
+            queue.push({
+              ...body,
+              offlineId: Date.now().toString(),
+              offlineCreatedAt: new Date().toISOString(),
+            });
+            await putInCache(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
 
-          return new Response(
-            JSON.stringify({
-              report: { id: `offline-${Date.now()}`, status: "PENDING" },
-              classification: null,
-              needsCoach: false,
-              offline: true,
-            }),
-            { headers: { "Content-Type": "application/json" } }
-          );
+            return new Response(
+              JSON.stringify({
+                report: { id: `offline-${Date.now()}`, status: "PENDING" },
+                classification: null,
+                needsCoach: false,
+                offline: true,
+              }),
+              { headers: { "Content-Type": "application/json" } }
+            );
+          } catch {
+            return new Response(JSON.stringify({ error: "Failed to queue offline report" }), {
+              status: 500,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
         })
       );
-      return;
     }
+    return;
+  }
 
+  // Network first for all HTML navigation and API routes
+  if (event.request.mode === "navigate" || url.pathname.startsWith("/api/")) {
     event.respondWith(
-      fetch(event.request).catch(() =>
-        caches.match(event.request).then((r) => r || new Response("Offline", { status: 503 }))
-      )
+      fetch(event.request).catch(() => caches.match(event.request))
     );
     return;
   }
 
-  // Static assets: cache first
+  // Cache first for static images and assets
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
       return fetch(event.request).then((response) => {
-        if (response.status === 200) {
+        if (response && response.status === 200) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
         }
         return response;
-      }).catch(() => caches.match("/"));
+      }).catch(() => cached);
     })
   );
 });
@@ -95,11 +104,9 @@ self.addEventListener("fetch", (event) => {
 // Background sync: when back online, sync queued reports
 self.addEventListener("message", async (event) => {
   if (event.data && event.data.type === "SYNC_OFFLINE_REPORTS") {
-    const queue = JSON.parse(
-      (await getFromCache(OFFLINE_QUEUE_KEY)) || "[]"
-    );
-    if (queue.length > 0) {
-      try {
+    try {
+      const queue = JSON.parse((await getFromCache(OFFLINE_QUEUE_KEY)) || "[]");
+      if (queue.length > 0) {
         const res = await fetch("/api/sync", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -109,24 +116,32 @@ self.addEventListener("message", async (event) => {
           await putInCache(OFFLINE_QUEUE_KEY, "[]");
           const clients = await self.clients.matchAll();
           clients.forEach((client) =>
-            client.postMessage({ type: "SYNC_COMPLETE", data: await res.json() })
+            client.postMessage({ type: "SYNC_COMPLETE", data: res.status })
           );
         }
-      } catch (e) {
-        // Will retry next time
       }
+    } catch {
+      // Retry next time online
     }
   }
 });
 
-// Helper: simple cache-based key-value store for offline queue
+// Helper functions for Cache Storage
 async function getFromCache(key) {
-  const cache = await caches.open("safesignal-data");
-  const response = await cache.match(new Request(key));
-  return response ? response.text() : null;
+  try {
+    const cache = await caches.open("safesignal-data");
+    const response = await cache.match(new Request(key));
+    return response ? await response.text() : null;
+  } catch {
+    return null;
+  }
 }
 
 async function putInCache(key, value) {
-  const cache = await caches.open("safesignal-data");
-  await cache.put(new Request(key), new Response(value));
+  try {
+    const cache = await caches.open("safesignal-data");
+    await cache.put(new Request(key), new Response(value));
+  } catch {
+    // Ignore cache storage errors
+  }
 }

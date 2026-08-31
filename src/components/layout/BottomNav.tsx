@@ -11,11 +11,12 @@ export default function BottomNav() {
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
+    if (!user) return;
     fetch("/api/notifications")
       .then((r) => r.json())
       .then((d) => setUnread(d.unreadCount || 0))
       .catch(() => {});
-  }, [pathname]);
+  }, [pathname, user]);
 
   const items = user?.role === "officer"
     ? [
