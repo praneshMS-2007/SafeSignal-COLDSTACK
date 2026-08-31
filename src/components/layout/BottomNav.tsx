@@ -38,7 +38,9 @@ export default function BottomNav() {
     <nav className="fixed bottom-0 left-0 w-full flex justify-around items-center bg-[#0B1727] border-t border-slate-800 z-50 h-16 lg:hidden px-2 shadow-2xl">
       {items.map((item) => {
         const isActive =
-          item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          item.href === "/"
+            ? pathname === "/"
+            : pathname === item.href || pathname.startsWith(item.href + "/");
 
         return (
           <Link

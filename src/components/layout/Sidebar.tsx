@@ -61,7 +61,9 @@ export default function Sidebar() {
           <nav className="flex flex-col gap-1">
             {visibleItems.map((item) => {
               const isActive =
-                item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+                item.href === "/"
+                  ? pathname === "/"
+                  : pathname === item.href || pathname.startsWith(item.href + "/");
               const showBadge = item.href === "/notifications" && unreadCount > 0;
 
               return (
