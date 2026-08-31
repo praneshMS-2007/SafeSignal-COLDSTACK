@@ -49,7 +49,7 @@ export default function Sidebar() {
       <div className="flex flex-col gap-6">
         {/* Brand Card matching Template */}
         <Link href="/" className="group block transition-transform group-hover:scale-[1.02]">
-          <Logo variant="card" />
+          <Logo variant="sidebar" />
         </Link>
 
         {/* Navigation Items */}
