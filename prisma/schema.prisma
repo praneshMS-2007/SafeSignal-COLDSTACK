@@ -1,0 +1,171 @@
+// SafeSignal Database Schema
+// Using SQLite for development; switch DATABASE_URL for Supabase PostgreSQL in production
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── User & Auth ───────────────────────────────────────────────────
+model User {
+  id            String         @id @default(cuid())
+  username      String         @unique
+  passwordHash  String         // bcrypt hash
+  displayName   String
+  role          String         @default("employee") // employee | officer
+  site          String?        // Default site
+  crew          String?
+  createdAt     DateTime       @default(now())
+
+  reports       Report[]
+  notifications Notification[]
+}
+
+// ─── Notifications (Closed-loop) ───────────────────────────────────
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  type      String   // REPORT_TRIAGED | REPORT_FIXED | STOP_WORK | COACH_NEEDED | TICKET_UPDATE
+  reportId  String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([read])
+}
+
+// ─── Core: Safety Report ───────────────────────────────────────────
+model Report {
+  id              String          @id @default(cuid())
+  rawText         String
+  mediaUrl        String?
+  hazardCategory  String?
+  inputMode       String          @default("TEXT")
+  location        String?
+  site            String?
+  crew            String?
+  timestamp       String?
+  status          String          @default("PENDING")
+  offlineCreatedAt String?
+  userId          String?
+  user            User?           @relation(fields: [userId], references: [id])
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  classification  Classification?
+  tickets         Ticket[]
+
+  @@index([status])
+  @@index([site])
+  @@index([userId])
+}
+
+// ─── AI Classification Result ──────────────────────────────────────
+model Classification {
+  id                String   @id @default(cuid())
+  reportId          String   @unique
+  report            Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  classification    String
+  priority          Int
+  energyType        String?
+  killThreshold     String?
+  workerProximity   String?
+  barrierRequired   String?
+  barrierState      String?
+  iogpRule          String?
+  anyoneHurt        String?
+  ruleVersion       String?  @default("v1.4")
+  modelVersion      String?  @default("gemini-2.5-flash-lite")
+  ruleVerdict       String?
+  aiVerdict         String?
+  finalVerdict      String?
+  evidenceQuotes    String?
+  confidence        Float?
+  coachQuestion     String?
+  coachAnswer       String?
+  createdAt         DateTime @default(now())
+}
+
+// ─── Repair Ticket ─────────────────────────────────────────────────
+model Ticket {
+  id               String         @id @default(cuid())
+  reportId         String
+  report           Report         @relation(fields: [reportId], references: [id])
+  barrier          String
+  failureMode      String?
+  owner            String?
+  site             String?
+  dueDate          String?
+  status           String         @default("OPEN")
+  watchStartDate   String?
+  watchDaysTotal   Int            @default(30)
+  watchDaysElapsed Int            @default(0)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  linkedReports    LinkedReport[]
+  evidences        Evidence[]
+
+  @@index([status])
+  @@index([barrier])
+  @@index([site])
+}
+
+// ─── Linked Reports to Ticket ──────────────────────────────────────
+model LinkedReport {
+  id          String   @id @default(cuid())
+  ticketId    String
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  type        String
+  description String
+  date        String
+  reportRef   String?
+
+  @@index([ticketId])
+}
+
+// ─── Evidence attached to tickets ──────────────────────────────────
+model Evidence {
+  id          String   @id @default(cuid())
+  ticketId    String
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  fileName    String
+  fileUrl     String
+  uploadedBy  String?
+  createdAt   DateTime @default(now())
+
+  @@index([ticketId])
+}
+
+// ─── Barrier Health Metrics ────────────────────────────────────────
+model BarrierHealth {
+  id              String   @id @default(cuid())
+  barrierName     String   @unique
+  mtbfDays        Int
+  lastQuarterMtbf Int?
+  trend           String
+  icon            String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ─── Site Metrics ──────────────────────────────────────────────────
+model Site {
+  id             String @id @default(cuid())
+  name           String @unique
+  precursorRate  Float
+}
+
+// ─── App Settings (persisted) ──────────────────────────────────────
+model Setting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+}
