@@ -148,13 +148,26 @@ export function isLethalEnergy(energyType: string | null): boolean {
 
 // ─── AI Field Extraction via Gemini ─────────────────────────────
 
+// Helper: Timeout wrapper to ensure AI never hangs requests
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: () => T): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback()), ms)),
+  ]);
+}
+
 export async function extractFieldsWithAI(
   rawText: string
 ): Promise<ExtractedFields> {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+    if (!process.env.GEMINI_API_KEY) {
+      return fallbackExtraction(rawText);
+    }
 
-    const prompt = `You are an industrial safety analyst for Oil India Limited. Analyze this safety report and extract structured fields.
+    const aiPromise = (async () => {
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+      const prompt = `You are an industrial safety analyst for Oil India Limited. Analyze this safety report and extract structured fields.
 
 SAFETY REPORT:
 "${rawText}"
@@ -177,25 +190,28 @@ Rules:
 - Be conservative: when in doubt, use UNKNOWN.
 - Support English, Hindi, Assamese, and code-mixed text.`;
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
 
-    // Parse JSON from response (handle markdown code blocks)
-    const jsonStr = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-    const parsed = JSON.parse(jsonStr);
+      // Parse JSON from response (handle markdown code blocks)
+      const jsonStr = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      const parsed = JSON.parse(jsonStr);
 
-    return {
-      energyType: parsed.energyType || null,
-      killThreshold: parsed.killThreshold === "Yes" ? "Yes" : parsed.killThreshold === "No" ? "No" : null,
-      workerProximity: parsed.workerProximity || null,
-      barrierRequired: parsed.barrierRequired || null,
-      barrierState: ["PRESENT", "ABSENT", "UNKNOWN"].includes(parsed.barrierState)
-        ? parsed.barrierState
-        : "UNKNOWN",
-      iogpRule: parsed.iogpRule || null,
-      anyoneHurt: parsed.anyoneHurt === "Yes" ? "Yes" : "No",
-      evidenceQuotes: Array.isArray(parsed.evidenceQuotes) ? parsed.evidenceQuotes : [],
-    };
+      return {
+        energyType: parsed.energyType || null,
+        killThreshold: parsed.killThreshold === "Yes" ? "Yes" : parsed.killThreshold === "No" ? "No" : null,
+        workerProximity: parsed.workerProximity || null,
+        barrierRequired: parsed.barrierRequired || null,
+        barrierState: ["PRESENT", "ABSENT", "UNKNOWN"].includes(parsed.barrierState)
+          ? parsed.barrierState
+          : "UNKNOWN",
+        iogpRule: parsed.iogpRule || null,
+        anyoneHurt: parsed.anyoneHurt === "Yes" ? "Yes" : "No",
+        evidenceQuotes: Array.isArray(parsed.evidenceQuotes) ? parsed.evidenceQuotes : [],
+      } as ExtractedFields;
+    })();
+
+    return await withTimeout(aiPromise, 3500, () => fallbackExtraction(rawText));
   } catch (error) {
     console.error("AI extraction failed, using fallback:", error);
     return fallbackExtraction(rawText);
@@ -261,10 +277,20 @@ export async function generateCoachQuestion(
   rawText: string,
   fields: ExtractedFields
 ): Promise<string> {
-  try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+  const fallbackQ = () => {
+    const barrier = fields.barrierRequired || "safety control";
+    return `Was the ${barrier} in place before work started?`;
+  };
 
-    const prompt = `You are a safety coach for Oil India Limited. A worker submitted this safety report:
+  try {
+    if (!process.env.GEMINI_API_KEY) {
+      return fallbackQ();
+    }
+
+    const aiPromise = (async () => {
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+      const prompt = `You are a safety coach for Oil India Limited. A worker submitted this safety report:
 
 "${rawText}"
 
@@ -280,12 +306,13 @@ Generate EXACTLY ONE short, clear, yes/no question to determine if the safety ba
 
 Respond with ONLY the question, nothing else.`;
 
-    const result = await model.generateContent(prompt);
-    return result.response.text().trim();
+      const result = await model.generateContent(prompt);
+      return result.response.text().trim();
+    })();
+
+    return await withTimeout(aiPromise, 3500, fallbackQ);
   } catch {
-    // Fallback question
-    const barrier = fields.barrierRequired || "safety control";
-    return `Was the ${barrier} in place before work started?`;
+    return fallbackQ();
   }
 }
 

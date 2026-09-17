@@ -30,6 +30,61 @@ export default function ReportHazardPage() {
   const [showTapGrid, setShowTapGrid] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Optional GPS Location States
+  const [gpsCoords, setGpsCoords] = useState<{
+    lat: number;
+    lng: number;
+    accuracy: number;
+    formatted: string;
+  } | null>(null);
+  const [gpsStatus, setGpsStatus] = useState<"idle" | "requesting" | "acquired" | "denied" | "unavailable">("idle");
+  const [gpsErrorMsg, setGpsErrorMsg] = useState<string | null>(null);
+
+  const handleRequestGps = () => {
+    if (typeof window === "undefined" || !("geolocation" in navigator)) {
+      setGpsStatus("unavailable");
+      setGpsErrorMsg("Geolocation is not supported by your browser / device.");
+      return;
+    }
+
+    setGpsStatus("requesting");
+    setGpsErrorMsg(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude, accuracy } = position.coords;
+        const latDir = latitude >= 0 ? "N" : "S";
+        const lngDir = longitude >= 0 ? "E" : "W";
+        const formatted = `${Math.abs(latitude).toFixed(4)}° ${latDir}, ${Math.abs(longitude).toFixed(4)}° ${lngDir}`;
+        setGpsCoords({
+          lat: latitude,
+          lng: longitude,
+          accuracy: Math.round(accuracy),
+          formatted,
+        });
+        setGpsStatus("acquired");
+      },
+      (error) => {
+        setGpsStatus("denied");
+        let msg = "Location permission denied. Standard site assignment will be used.";
+        if (error.code === 2) msg = "Device location unavailable. Standard site assignment will be used.";
+        if (error.code === 3) msg = "Location request timed out. Standard site assignment will be used.";
+        setGpsErrorMsg(msg);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000,
+      }
+    );
+  };
+
+  const handleRemoveGps = () => {
+    setGpsCoords(null);
+    setGpsStatus("idle");
+    setGpsErrorMsg(null);
+  };
+
   const handleVoiceInput = () => {
     if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
       alert("Speech recognition is not supported in this browser.");
@@ -119,6 +174,10 @@ export default function ReportHazardPage() {
     if (!rawText.trim()) return;
     setIsSubmitting(true);
 
+    const locationValue = gpsCoords
+      ? `GPS: ${gpsCoords.lat.toFixed(6)}, ${gpsCoords.lng.toFixed(6)} (±${gpsCoords.accuracy}m)`
+      : "Duliajan";
+
     try {
       const res = await fetch("/api/reports", {
         method: "POST",
@@ -128,7 +187,7 @@ export default function ReportHazardPage() {
           hazardCategory: selectedCategory,
           inputMode: inputMode || "TEXT",
           site: user?.site || "Rig 4",
-          location: "Duliajan",
+          location: locationValue,
           crew: user?.crew || "Workover crew B",
           timestamp: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
           mediaUrl: photoPreview || null,
@@ -152,12 +211,12 @@ export default function ReportHazardPage() {
         hazardCategory: selectedCategory,
         inputMode: inputMode || "TEXT",
         site: user?.site || "Rig 4",
-        location: "Duliajan",
+        location: locationValue,
         crew: user?.crew || "Workover crew B",
         offlineCreatedAt: new Date().toISOString(),
       });
       localStorage.setItem("offlineReports", JSON.stringify(queue));
-      alert("Report saved offline. It will sync when signal returns.");
+      alert("Report saved offline with your location preferences. It will sync when signal returns.");
       router.push("/reports");
     } finally {
       setIsSubmitting(false);
@@ -320,6 +379,129 @@ export default function ReportHazardPage() {
             </div>
             <span className="text-[11px] font-mono text-slate-400">Auto-geotagged</span>
           </div>
+        </div>
+
+        {/* ─── OPTIONAL DEVICE GPS LOCATION ACCESS ─────────────── */}
+        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-xs flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[#2563EB] text-xl">
+                my_location
+              </span>
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                Device GPS Location Pinpoint
+              </h3>
+            </div>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
+              Optional · Non-Mandatory
+            </span>
+          </div>
+
+          <p className="text-xs text-slate-500 leading-relaxed">
+            You can optionally attach your device&apos;s real-time GPS coordinates to help safety officers and emergency response teams pinpoint the exact field hazard location.
+          </p>
+
+          {/* Location State: Acquired */}
+          {gpsStatus === "acquired" && gpsCoords && (
+            <div className="p-4 bg-emerald-50/80 border border-emerald-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in slide-in-from-top-1">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <span className="material-symbols-outlined text-lg">location_on</span>
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-emerald-950 flex items-center gap-2">
+                    <span>GPS Coordinates Attached</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  </div>
+                  <div className="text-sm font-mono font-bold text-emerald-800 mt-0.5">
+                    {gpsCoords.formatted}
+                  </div>
+                  <div className="text-[11px] text-emerald-700">
+                    Accuracy: ±{gpsCoords.accuracy} meters · Geo-stamped
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={`https://www.google.com/maps?q=${gpsCoords.lat},${gpsCoords.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-8 px-3 bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs"
+                >
+                  <span>View Map</span>
+                  <span className="material-symbols-outlined text-xs">open_in_new</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={handleRemoveGps}
+                  className="h-8 px-3 bg-white hover:bg-red-50 text-red-600 border border-red-200 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors"
+                  title="Remove shared GPS coordinates"
+                >
+                  <span>Remove</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Location State: Requesting */}
+          {gpsStatus === "requesting" && (
+            <div className="p-4 bg-blue-50/80 border border-blue-200 rounded-xl flex items-center justify-between gap-3 animate-pulse">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined animate-spin text-blue-600">
+                  progress_activity
+                </span>
+                <div>
+                  <div className="text-xs font-bold text-blue-900">
+                    Requesting Device GPS Permission...
+                  </div>
+                  <div className="text-[11px] text-blue-700">
+                    Please approve the browser prompt to share your current location.
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Location State: Denied or Error */}
+          {(gpsStatus === "denied" || gpsStatus === "unavailable") && (
+            <div className="p-3.5 bg-amber-50/80 border border-amber-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-xs text-amber-900 font-medium">
+                <span className="material-symbols-outlined text-amber-600 text-base shrink-0">
+                  info
+                </span>
+                <span>{gpsErrorMsg || "Location access skipped. Standard site location will be assigned."}</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleRequestGps}
+                className="h-7 px-3 bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold shrink-0 self-start sm:self-auto transition-colors"
+              >
+                Retry GPS
+              </button>
+            </div>
+          )}
+
+          {/* Location State: Idle (Not yet requested) */}
+          {gpsStatus === "idle" && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <span className="w-2 h-2 rounded-full bg-slate-300"></span>
+                <span>Default tag: <strong className="text-slate-700">{user?.site || "Rig 4"} (Manual)</strong></span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleRequestGps}
+                className="h-9 px-4 bg-[#F1F5F9] hover:bg-[#E2E8F0] active:scale-98 text-[#0F172A] border border-slate-300 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all self-start sm:self-auto shadow-xs"
+              >
+                <span className="material-symbols-outlined text-blue-600 text-base">
+                  near_me
+                </span>
+                <span>Share Current GPS Location</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ─── SUBMIT BUTTON ───────────────────────────────────── */}

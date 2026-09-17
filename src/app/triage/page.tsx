@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 interface TriageReport {
   id: string;
@@ -38,15 +38,21 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-export default function TriagePage() {
+function TriageContent() {
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [reports, setReports] = useState<TriageReport[]>([]);
   const [stats, setStats] = useState<TriageStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("ALL");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
   const [siteFilter, setSiteFilter] = useState("ALL");
+
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q !== null) setSearchQuery(q);
+  }, [searchParams]);
 
   useEffect(() => {
     if (user && user.role === "employee") {
@@ -62,7 +68,7 @@ export default function TriagePage() {
       })
       .catch((err) => console.error("Error loading triage:", err))
       .finally(() => setLoading(false));
-  }, []);
+  }, [user, router]);
 
   const handleConfirm = async (id: string) => {
     await fetch(`/api/reports/${id}`, {
@@ -451,5 +457,13 @@ export default function TriagePage() {
         </div>
       </div>
     </AppLayout>
+  );
+}
+
+export default function TriagePage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-400">Loading triage queue...</div>}>
+      <TriageContent />
+    </Suspense>
   );
 }

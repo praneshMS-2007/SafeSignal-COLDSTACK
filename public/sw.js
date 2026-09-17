@@ -78,6 +78,16 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Completely bypass Next.js internal files, HMR, chrome extensions, and dev bundles
+  if (
+    url.pathname.startsWith("/_next/") ||
+    url.pathname.includes("webpack") ||
+    url.protocol.startsWith("chrome-extension") ||
+    url.pathname.startsWith("/api/auth")
+  ) {
+    return;
+  }
+
   // Network first for all HTML navigation and API routes
   if (event.request.mode === "navigate" || url.pathname.startsWith("/api/")) {
     event.respondWith(

@@ -3,15 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
-import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 import Logo from "@/components/Logo";
 
 export default function TopBar() {
   const [isOnline, setIsOnline] = useState(true);
-  const { user } = useAuth();
-  const [unreadCount, setUnreadCount] = useState(0);
-  const pathname = usePathname();
+  const { user, unreadCount } = useAuth();
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
@@ -26,13 +25,12 @@ export default function TopBar() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!user) return;
-    fetch("/api/notifications")
-      .then((r) => r.json())
-      .then((data) => setUnreadCount(data.unreadCount || 0))
-      .catch(() => {});
-  }, [pathname, user]);
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    const dest = user?.role === "officer" ? "/triage" : "/reports";
+    router.push(`${dest}?q=${encodeURIComponent(searchQuery.trim())}`);
+  };
 
   return (
     <header className="w-full bg-white border-b border-[#E2E8F0] px-4 lg:px-8 py-3.5 sticky top-0 z-40 flex items-center justify-between gap-4 shadow-xs">
@@ -45,7 +43,7 @@ export default function TopBar() {
 
       {/* ─── DESKTOP GLOBAL SEARCH BAR ─────────────────────────── */}
       <div className="hidden lg:flex items-center flex-1 max-w-xl">
-        <div className="relative w-full">
+        <form onSubmit={handleSearchSubmit} className="relative w-full">
           <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
             <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
@@ -55,10 +53,10 @@ export default function TopBar() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Global Search (Reports, Workers, Rig Sites, Barriers, Tickets...)"
+            placeholder="Global Search (Reports, Workers, Rig Sites, Barriers, Tickets... Press Enter)"
             className="w-full h-10 pl-10 pr-4 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-medium text-[#0F172A] placeholder:text-slate-400 focus:bg-white focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] focus:outline-none transition-all"
           />
-        </div>
+        </form>
       </div>
 
       {/* ─── RIGHT HEADER CONTROLS ─────────────────────────────── */}

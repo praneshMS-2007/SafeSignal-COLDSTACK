@@ -11,6 +11,7 @@ interface Report {
   status: string;
   createdAt: string;
   site: string | null;
+  location: string | null;
   classification: {
     classification: string;
     priority: number;
@@ -258,6 +259,13 @@ export default function MyReportsPage() {
                             <span className="text-xs font-semibold text-slate-500">
                               {r.site || "Rig 4"}
                             </span>
+
+                            {r.location && r.location.startsWith("GPS:") && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md text-[10px] font-mono font-bold">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                <span>GPS Geotagged</span>
+                              </span>
+                            )}
 
                             {r.classification?.iogpRule && (
                               <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md text-[10px] font-semibold">

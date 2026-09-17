@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
+let triageCache: { data: any; expiry: number } | null = null;
+
 // GET /api/triage — Triage queue sorted by fatal potential
 export async function GET() {
+  const now = Date.now();
+  if (triageCache && triageCache.expiry > now) {
+    return NextResponse.json(triageCache.data);
+  }
+
   // Get all triaged reports with classifications, sorted by priority (1=highest)
   const reports = await prisma.report.findMany({
     where: {
@@ -41,7 +48,7 @@ export async function GET() {
     ? { days: barrierHealth[0].mtbfDays, barrier: barrierHealth[0].barrierName }
     : { days: 0, barrier: "N/A" };
 
-  return NextResponse.json({
+  const payload = {
     reports: sorted,
     stats: {
       psifCount,
@@ -49,5 +56,8 @@ export async function GET() {
       capacityCount,
       mtbfTrend,
     },
-  });
+  };
+  triageCache = { data: payload, expiry: now + 5000 };
+
+  return NextResponse.json(payload);
 }

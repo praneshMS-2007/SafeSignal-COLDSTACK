@@ -15,17 +15,23 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  unreadCount: number;
   loginUser: (user: User) => void;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  refreshNotifications: () => Promise<void>;
+  setUnreadCount: (count: number | ((prev: number) => number)) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
+  unreadCount: 0,
   loginUser: () => {},
   logout: async () => {},
   refreshUser: async () => {},
+  refreshNotifications: async () => {},
+  setUnreadCount: () => {},
 });
 
 export function useAuth() {
@@ -35,6 +41,7 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -53,6 +60,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     }
   }, []);
+
+  const refreshNotifications = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await fetch("/api/notifications");
+      if (res.ok) {
+        const data = await res.json();
+        setUnreadCount(typeof data.unreadCount === "number" ? data.unreadCount : 0);
+      }
+    } catch {
+      // Ignore notification fetch errors
+    }
+  }, [user]);
 
   const loginUser = (newUser: User) => {
     setUser(newUser);
@@ -78,6 +98,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUser();
   }, [refreshUser]);
 
+  useEffect(() => {
+    if (user) {
+      refreshNotifications();
+    }
+  }, [user, pathname, refreshNotifications]);
+
   // Redirect unauthenticated users to /login
   useEffect(() => {
     if (!loading && !user && pathname !== "/login") {
@@ -86,7 +112,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loading, user, pathname, router]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, loginUser, logout, refreshUser }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        unreadCount,
+        loginUser,
+        logout,
+        refreshUser,
+        refreshNotifications,
+        setUnreadCount,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

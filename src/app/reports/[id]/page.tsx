@@ -11,6 +11,7 @@ interface ReportDetail {
   rawText: string;
   site: string;
   crew: string;
+  location: string | null;
   timestamp: string;
   mediaUrl: string | null;
   status: string;
@@ -258,6 +259,31 @@ export default function ReportDetailPage() {
               <div className="p-4 bg-[#F8FAFC] rounded-xl border border-slate-200 text-sm font-medium text-[#0F172A] leading-relaxed">
                 &ldquo;{report.rawText}&rdquo;
               </div>
+
+              {/* Location & GPS Tag */}
+              {report.location && (
+                <div className="mt-3 flex items-center justify-between gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs">
+                  <div className="flex items-center gap-1.5 text-slate-700 font-medium truncate">
+                    <span className="material-symbols-outlined text-blue-600 text-base shrink-0">
+                      {report.location.startsWith("GPS:") ? "my_location" : "location_on"}
+                    </span>
+                    <span className="truncate">{report.location}</span>
+                  </div>
+                  {report.location.startsWith("GPS:") && (
+                    <a
+                      href={`https://www.google.com/maps?q=${encodeURIComponent(
+                        report.location.replace("GPS:", "").split("(")[0].trim()
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] font-bold text-blue-600 hover:text-blue-800 hover:underline shrink-0 flex items-center gap-0.5"
+                    >
+                      <span>Map</span>
+                      <span className="material-symbols-outlined text-xs">open_in_new</span>
+                    </a>
+                  )}
+                </div>
+              )}
 
               {report.mediaUrl && (
                 <div className="mt-4 rounded-xl overflow-hidden border border-slate-200 relative">
